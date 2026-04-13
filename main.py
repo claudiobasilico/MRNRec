@@ -1484,7 +1484,7 @@ HTML = r"""<!DOCTYPE html>
   }
 
   /* MAIN */
-  #ivisto-panel .main { max-width: 860px; margin: 0 auto; padding: 24px; }
+  #ivisto-panel .main { max-width: 860px; margin: 0; padding: 24px; }
 
   /* CARD */
   #ivisto-panel .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
