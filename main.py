@@ -1670,13 +1670,9 @@ HTML = r"""<!DOCTYPE html>
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="showTab('tab-rec', this)">⚖ Riconciliazione</button>
-    <button class="tab-btn" onclick="showTab('tab-admin', this)" id="adminTabBtn" style="display:none">
-      🛡 Amministrazione
-    </button>
-    <button class="tab-btn" onclick="showTab('tab-ivisto', this)">
-      📋 IVISTO CC599C
-    </button>
+    <button class="tab-btn active" onclick="showTab('tab-rec', this)">Riconciliazione</button>
+    <button class="tab-btn" onclick="showTab('tab-ivisto', this)">IVISTO CC599C</button>
+    <button class="tab-btn" onclick="showTab('tab-admin', this)" id="adminTabBtn" style="display:none">Amministrazione</button>
   </div>
 
   <!-- TAB: RICONCILIAZIONE -->
