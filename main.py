@@ -1271,6 +1271,8 @@ HTML = r"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SIRIO · Sistema di Riconciliazione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg:      #0f1117;
@@ -1469,6 +1471,140 @@ HTML = r"""<!DOCTYPE html>
   .alert { padding: 10px 14px; border-radius: 7px; font-size: .85rem; margin-bottom: 12px; }
   .alert-error   { background: rgba(255,68,68,.12);   color: var(--debole); border: 1px solid rgba(255,68,68,.3); }
   .alert-success { background: rgba(0,200,81,.1);    color: var(--certo);  border: 1px solid rgba(0,200,81,.3); }
+
+  /* ═══════════════════════════════════════════════════════════════════════════ */
+  /* ── IVISTO CC599C VIEWER (scopato su #ivisto-panel) ── */
+  /* ═════════════════════════════════════════════════════════════════════════════ */
+
+  #ivisto-panel {
+    --bg: #0f1117; --surface: #181c27; --surface2: #1e2336; --border: #2a3050; --border2: #3a4570;
+    --accent: #4f8ef7; --accent2: #2ecc8a; --warn: #f5a623; --danger: #e05555;
+    --text: #e8eaf0; --text2: #8890a8; --text3: #5a6280;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  /* MAIN */
+  #ivisto-panel .main { max-width: 860px; margin: 0 auto; padding: 24px; }
+
+  /* CARD */
+  #ivisto-panel .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  #ivisto-panel .card-head { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+
+  /* UPLOAD */
+  #ivisto-panel .upload-zone { border: 1px dashed var(--border2); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: var(--surface2); }
+  #ivisto-panel .upload-zone:hover { border-color: var(--accent); background: rgba(79,142,247,0.05); }
+  #ivisto-panel .upload-zone input { display: none; }
+  #ivisto-panel .upload-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+  #ivisto-panel .upload-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  /* TAB SWITCHER */
+  #ivisto-panel .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+  #ivisto-panel .tab-btn { padding: 8px 16px; font-size: 12px; color: var(--text2); cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; font-family: var(--sans); transition: all 0.15s; margin-bottom: -1px; }
+  #ivisto-panel .tab-btn:hover { color: var(--text); }
+  #ivisto-panel .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  #ivisto-panel .tab-panel { display: none; }
+  #ivisto-panel .tab-panel.active { display: block; }
+
+  /* TEXTAREA XML */
+  #ivisto-panel .xml-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 10px 12px; font-size: 11px; font-family: var(--mono); resize: vertical; min-height: 140px; line-height: 1.6; transition: border-color 0.15s; }
+  #ivisto-panel .xml-input:focus { outline: none; border-color: var(--accent); }
+  #ivisto-panel .xml-input::placeholder { color: var(--text3); }
+  #ivisto-panel .paste-toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+  /* BOTTONI */
+  #ivisto-panel .btn { padding: 7px 14px; border-radius: 5px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; font-family: var(--sans); transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+  #ivisto-panel .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+  #ivisto-panel .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  #ivisto-panel .btn-primary { background: var(--accent); color: #fff; }
+  #ivisto-panel .btn-primary:hover { background: #6a9ff8; }
+  #ivisto-panel .toolbar { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  /* ALERT */
+  #ivisto-panel .alert { padding: 10px 14px; border-radius: 5px; font-size: 12px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; }
+  #ivisto-panel .alert-err { background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.25); color: var(--danger); }
+  #ivisto-panel .alert-err ul { margin: 4px 0 0 16px; }
+
+  /* RESULT BLOCK */
+  #ivisto-panel .result-block { border-radius: 6px; padding: 14px 16px; border-left: 3px solid; margin-bottom: 16px; }
+  #ivisto-panel .result-A1 { background: rgba(79,142,247,0.08); border-color: var(--accent); }
+  #ivisto-panel .result-A1 .result-code, #ivisto-panel .result-A1 .result-desc { color: #7fb3ff; }
+  #ivisto-panel .result-A2 { background: rgba(46,204,138,0.08); border-color: var(--accent2); }
+  #ivisto-panel .result-A2 .result-code, #ivisto-panel .result-A2 .result-desc { color: var(--accent2); }
+  #ivisto-panel .result-A3 { background: rgba(245,166,35,0.08); border-color: var(--warn); }
+  #ivisto-panel .result-A3 .result-code, #ivisto-panel .result-A3 .result-desc { color: var(--warn); }
+  #ivisto-panel .result-B  { background: rgba(224,85,85,0.08); border-color: var(--danger); }
+  #ivisto-panel .result-B  .result-code, #ivisto-panel .result-B  .result-desc { color: var(--danger); }
+  #ivisto-panel .result-default { background: var(--surface2); border-color: var(--border2); }
+  #ivisto-panel .result-code { font-family: var(--mono); font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+  #ivisto-panel .result-desc { font-size: 12px; line-height: 1.6; opacity: 0.85; }
+
+  /* BADGE */
+  #ivisto-panel .badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 10px; font-size: 10px; font-family: var(--mono); padding: 2px 8px; font-weight: 600; }
+  #ivisto-panel .badge-ok      { background: rgba(46,204,138,0.15); color: var(--accent2); }
+  #ivisto-panel .badge-info    { background: rgba(79,142,247,0.15); color: var(--accent); }
+  #ivisto-panel .badge-warn    { background: rgba(245,166,35,0.15); color: var(--warn); }
+  #ivisto-panel .badge-err     { background: rgba(224,85,85,0.15);  color: var(--danger); }
+  #ivisto-panel .badge-neutral { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+
+  /* DOT */
+  #ivisto-panel .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  #ivisto-panel .dot-ok      { background: var(--accent2); }
+  #ivisto-panel .dot-info    { background: var(--accent); }
+  #ivisto-panel .dot-warn    { background: var(--warn); }
+  #ivisto-panel .dot-danger  { background: var(--danger); }
+  #ivisto-panel .dot-neutral { background: var(--text3); }
+
+  /* STAT BOXES */
+  #ivisto-panel .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #ivisto-panel .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  #ivisto-panel .stat-box.full { grid-column: 1 / -1; }
+  #ivisto-panel .stat-label { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  #ivisto-panel .stat-value { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; word-break: break-all; }
+  #ivisto-panel .stat-value.mono { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  #ivisto-panel .stat-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+  /* TAG non in rubrica */
+  #ivisto-panel .tag-unknown { display: inline-block; background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.2); border-radius: 3px; font-size: 9px; padding: 0 4px; color: var(--danger); margin-left: 5px; vertical-align: middle; font-family: var(--mono); }
+
+  /* SEZIONI DOC */
+  #ivisto-panel .doc-section { margin-bottom: 20px; }
+  #ivisto-panel .doc-section-title { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+  /* NOTE */
+  #ivisto-panel .note-text { font-size: 11px; color: var(--text3); line-height: 1.7; }
+
+  /* PRINT */
+  #ivisto-panel #printDate { display: none; }
+
+  @media print {
+    #ivisto-panel .main { max-width: 100%; padding: 0; }
+    #ivisto-panel .card { background: #fff; border: 1px solid #ccc; padding: 12px; margin-bottom: 10px; box-shadow: none; }
+    #ivisto-panel .card-head { color: #555; border-bottom-color: #ccc; margin-bottom: 10px; padding-bottom: 6px; }
+    #ivisto-panel .stat-box { background: #f5f5f5; border-color: #ddd; padding: 8px 10px; }
+    #ivisto-panel .stat-label { color: #666; }
+    #ivisto-panel .stat-value { color: #111; font-size: 11px; }
+    #ivisto-panel .stat-value.mono { color: #1a4d8f; }
+    #ivisto-panel .stat-sub { color: #888; }
+    #ivisto-panel .stat-grid { gap: 6px; }
+    #ivisto-panel .result-block { padding: 10px 12px; margin-bottom: 10px; }
+    #ivisto-panel .result-code { font-size: 13px; }
+    #ivisto-panel .result-desc { font-size: 10px; opacity: 1; }
+    #ivisto-panel .result-A2 { background: #e8f7ee !important; border-color: #2a9e6a !important; }
+    #ivisto-panel .result-A2 .result-code, #ivisto-panel .result-A2 .result-desc { color: #1a5c3a !important; }
+    #ivisto-panel .result-A1 { background: #e8eef9 !important; border-color: #3a6ec0 !important; }
+    #ivisto-panel .result-A1 .result-code, #ivisto-panel .result-A1 .result-desc { color: #1a3d8f !important; }
+    #ivisto-panel .result-A3 { background: #fdf3e3 !important; border-color: #c07a10 !important; }
+    #ivisto-panel .result-A3 .result-code, #ivisto-panel .result-A3 .result-desc { color: #7a4d00 !important; }
+    #ivisto-panel .result-B  { background: #fdeaea !important; border-color: #b03030 !important; }
+    #ivisto-panel .result-B  .result-code, #ivisto-panel .result-B  .result-desc { color: #8f1a1a !important; }
+    #ivisto-panel .doc-section { margin-bottom: 12px; }
+    #ivisto-panel .doc-section-title { font-size: 9px; color: #888; border-bottom-color: #ccc; padding-bottom: 4px; margin-bottom: 6px; }
+    #ivisto-panel .badge { font-size: 9px; }
+    #ivisto-panel .tag-unknown { background: #fdeaea; color: #c00; border-color: #faa; }
+    #ivisto-panel .note-text { font-size: 9px; color: #888; }
+    #ivisto-panel #printDate { display: block !important; font-size: 10px; color: #888; margin-top: 6px; font-family: monospace; }
+    #ivisto-panel .toolbar, #ivisto-panel #uploadCard { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -1537,6 +1673,9 @@ HTML = r"""<!DOCTYPE html>
     <button class="tab-btn active" onclick="showTab('tab-rec', this)">⚖ Riconciliazione</button>
     <button class="tab-btn" onclick="showTab('tab-admin', this)" id="adminTabBtn" style="display:none">
       🛡 Amministrazione
+    </button>
+    <button class="tab-btn" onclick="showTab('tab-ivisto', this)">
+      📋 IVISTO CC599C
     </button>
   </div>
 
@@ -1723,6 +1862,41 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- TAB: IVISTO CC599C -->
+  <div class="tab-pane" id="tab-ivisto">
+    <div id="ivisto-panel">
+      <div class="main">
+        <div id="uploadCard" class="card">
+          <div class="card-head">Carica messaggio XML</div>
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="ivistoSwitchTab('file')">Carica file</button>
+            <button class="tab-btn"        onclick="ivistoSwitchTab('paste')">Incolla XML</button>
+          </div>
+          <div id="tab-file" class="tab-panel active">
+            <div class="upload-zone" id="dropZone" onclick="document.getElementById('fi').click()">
+              <div class="upload-title">Seleziona o trascina un file CC599C</div>
+              <div class="upload-sub">formato .xml &mdash; struttura CC599C (IVISTO)</div>
+              <input type="file" id="fi" accept=".xml,text/xml">
+            </div>
+          </div>
+          <div id="tab-paste" class="tab-panel">
+            <textarea id="xmlPaste" class="xml-input" placeholder="Incolla qui il contenuto XML del messaggio CC599C..."></textarea>
+            <div class="paste-toolbar">
+              <button class="btn btn-ghost" onclick="document.getElementById('xmlPaste').value=''">Cancella</button>
+              <button class="btn btn-primary" onclick="ivistoAnalyzeText()">Analizza</button>
+            </div>
+          </div>
+        </div>
+        <div id="errBox" style="display:none"></div>
+        <div id="out"    style="display:none"></div>
+        <div class="toolbar" id="tb" style="display:none">
+          <button class="btn btn-ghost"   onclick="ivistoClearDoc()">Nuovo file</button>
+          <button class="btn btn-primary" onclick="window.print()">Stampa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1824,8 +1998,8 @@ function logout() {
 
 // ── TABS ───────────────────────────────────────────────────────────────────
 function showTab(id, btn) {
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tabs ~ .tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
 }
@@ -2490,6 +2664,212 @@ async function loadLogs() {
     </div>`;
   }).join('');
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ── IVISTO CC599C VIEWER ────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+
+const EXIT_CODES = {
+  A1:{ label:"Conforme (A1)",              desc:"Merce uscita dal territorio doganale UE a seguito di controllo fisico (totale o parziale) — nessuna irregolarita' rilevata.",                                                                                                                                      cls:"A1", dot:"info",    badge:"badge-info" },
+  A2:{ label:"Ritenuto conforme (A2)",     desc:"Merce uscita dal territorio doganale UE a seguito di controllo esclusivamente documentale, senza ispezione fisica, oppure senza alcun controllo — nessuna irregolarita'. Costituisce prova di esportazione valida ai fini IVA (art. 8 DPR 633/72).",           cls:"A2", dot:"ok",      badge:"badge-ok" },
+  A3:{ label:"Procedura semplificata (A3)",desc:"Uscita confermata tramite procedura semplificata — nessun controllo eseguito dall'Ufficio di Uscita (spedizioniere autorizzato / AEO).",                                                                                                                      cls:"A3", dot:"warn",    badge:"badge-warn" },
+  A4:{ label:"Difformita' minori (A4)",    desc:"Rilevate difformita' minori durante il controllo. La merce e' rilasciata, ma l'Ufficio Doganale di Supervisione (SCO) verifica le discrepanze e puo' informare il dichiarante al di fuori del sistema. La dichiarazione non puo' essere emendata.",          cls:"A3", dot:"warn",    badge:"badge-warn" },
+  A5:{ label:"Sigilli non conformi (A5)",  desc:"I sigilli non sono risultati conformi (assenti, danneggiati o con discrepanze). La merce puo' essere comunque rilasciata se le difformita' sono minori.",                                                                                                     cls:"A3", dot:"warn",    badge:"badge-warn" },
+  B1:{ label:"Difformita' maggiori (B1)",  desc:"Rilevate difformita' maggiori durante il controllo doganale all'uscita. Contattare l'Ufficio Doganale di Esportazione.",                                                                                                                                      cls:"B",  dot:"danger",  badge:"badge-err" },
+  B2:{ label:"Non trovato (B2)",           desc:"La merce non e' stata trovata al momento dell'uscita dal territorio doganale UE.",                                                                                                                                                                             cls:"B",  dot:"danger",  badge:"badge-err" },
+  B3:{ label:"Non applicabile (B3)",       desc:"Risultato non applicabile per la tipologia di operazione.",                                                                                                                                                                                                   cls:"default", dot:"neutral", badge:"badge-neutral" },
+};
+
+const NATIONS = {
+  IT:"Italia",AT:"Austria",BE:"Belgio",CH:"Svizzera",CZ:"Rep. Ceca",DE:"Germania",
+  DK:"Danimarca",ES:"Spagna",FI:"Finlandia",FR:"Francia",GB:"Regno Unito",GR:"Grecia",
+  HR:"Croazia",HU:"Ungheria",IE:"Irlanda",LU:"Lussemburgo",NL:"Paesi Bassi",NO:"Norvegia",
+  PL:"Polonia",PT:"Portogallo",RO:"Romania",SE:"Svezia",SI:"Slovenia",SK:"Slovacchia",
+  TR:"Turchia",US:"USA",CN:"Cina",JP:"Giappone",MA:"Marocco",EG:"Egitto",
+};
+
+const OFFICES = {
+  IT273000:"UADM Lombardia 4 — Varese (ufficio principale)",IT273100:"UADM Lombardia 4 — Varese, sezione centrale (Via Dalmazia 56)",IT273102:"UADM Lombardia 4 — Distaccamento locale Gaggiolo (Cantello VA)",IT273104:"UADM Lombardia 4 — Sezione operativa Gaggiolo",IT273105:"UADM Lombardia 4 — Sezione operativa Luino",IT273199:"UADM Lombardia 4 — Varese, cassa centrale",IT232100:"UADM Lombardia 4 — Varese, sezione operativa (codice da verificare)",IT275000:"UADM Lombardia 5 — Como (ufficio principale)",IT275100:"UADM Lombardia 5 — Como, sezione centrale",IT275102:"UADM Lombardia 5 — Sezione operativa Lecco",IT275103:"UADM Lombardia 5 — Sezione operativa Montano Lucino",IT275104:"UADM Lombardia 5 — Sezione operativa Oria Valsolda",IT275105:"UADM Lombardia 5 — Sezione operativa Ponte Chiasso",IT275199:"UADM Lombardia 5 — Como, cassa centrale",IT277000:"UADM Lombardia 1 — Milano 1 (ufficio principale)",IT277100:"UADM Lombardia 1 — Milano 1, sezione centrale",IT277199:"UADM Lombardia 1 — Milano 1, cassa centrale",IT278000:"UADM Lombardia 2 — Milano 2 (ufficio principale)",IT278100:"UADM Lombardia 2 — Milano 2, sezione centrale",IT278199:"UADM Lombardia 2 — Milano 2, cassa centrale",IT279000:"UADM Lombardia 3 — Malpensa (ufficio principale)",IT279100:"UADM Lombardia 3 — Malpensa, sezione aeroportuale",IT279199:"UADM Lombardia 3 — Malpensa, cassa centrale",IT371000:"UADM Lombardia 6 — Milano 3 (ufficio principale)",IT371100:"UADM Lombardia 6 — Milano 3, sezione centrale",IT371199:"UADM Lombardia 6 — Milano 3, cassa centrale",IT271000:"UADM Lombardia — Pavia",IT272000:"UADM Lombardia — Tirano",IT274000:"UADM Lombardia — Brescia",IT274100:"UADM Lombardia — Brescia, sezione centrale",IT274101:"UADM Lombardia — Sezione operativa Cremona",IT276000:"UADM Lombardia — Bergamo",IT276100:"UADM Lombardia — Bergamo, sezione centrale",IT079000:"UADM — Mantova",IT079100:"UADM — Mantova, sezione centrale",IT223000:"UADM Emilia 1 — Bologna (sede)",IT223100:"UADM Emilia 1 Bologna — area centrale",IT223101:"UADM Emilia 1 Bologna — Aeroporto G. Marconi",IT223102:"UADM Emilia 1 Bologna — Interporto",IT223103:"UADM Emilia 1 Bologna — area territoriale Ferrara",IT029000:"UADM Emilia 2 — Piacenza (sede)",IT029100:"UADM Emilia 2 Piacenza — area centrale",IT028000:"UADM Emilia 3 — Parma (sede)",IT028100:"UADM Emilia 3 Parma — area centrale",IT028101:"UADM Emilia 3 Parma — Aeroporto G. Verdi",IT224000:"UADM Emilia 4 — Modena (sede)",IT224100:"UADM Emilia 4 Modena — area centrale",IT224101:"UADM Emilia 4 Modena — area territoriale Reggio Emilia",IT221000:"UADM Romagna 1 — Ravenna (sede)",IT221100:"UADM Romagna 1 Ravenna — area centrale",IT225000:"UADM Romagna 2 — Rimini (sede)",IT225100:"UADM Romagna 2 Rimini — area centrale",IT225101:"UADM Romagna 2 Rimini — area territoriale Forli-Cesena",IT222000:"Bologna — cod. precedente (-> IT223000 dal 04/2025)",IT025000:"Modena — cod. precedente (-> IT224000 dal 04/2025)",IT026000:"Rimini — cod. precedente (-> IT225000 dal 04/2025)",IT022999:"Reggio Emilia — cod. precedente (-> IT224101 dal 04/2025)",IT024000:"Forli-Cesena — cod. precedente (-> IT225101 dal 04/2025)",IT027000:"Ferrara — cod. precedente (-> IT223103 dal 04/2025)",IT118000:"Aosta",IT116000:"Biella",IT311000:"Cuneo",IT312000:"Novara",IT313000:"Alessandria",IT314000:"Torino",IT117000:"Vercelli",IT119000:"Verbano-Cusio-Ossola",IT261000:"Genova 1",IT262000:"Genova 2",IT263000:"Rivalta Scrivia — Retroporto Genova",IT067000:"Imperia",IT068000:"La Spezia",IT066000:"Savona",IT034000:"Bolzano",IT035000:"Trento",IT134000:"Treviso",IT135000:"Vicenza",IT136000:"Verona",IT137000:"Venezia",IT138000:"Padova",IT126000:"Pordenone",IT127000:"Gorizia",IT128000:"Udine",IT129000:"Trieste",IT321000:"Fernetti — Retroporto Trieste",IT051999:"Arezzo",IT057000:"Firenze",IT055000:"Livorno",IT054000:"Pisa",IT056000:"Prato e Pistoia",IT107000:"Perugia",IT108000:"Terni",IT305000:"Ancona",IT308000:"Civitanova Marche",IT301000:"Civitavecchia",IT302000:"Frosinone",IT105999:"Gaeta",IT309000:"L'Aquila",IT303000:"Campobasso",IT304000:"Pescara",IT306000:"Roma 1",IT307000:"Roma 2",IT088000:"Caserta",IT089000:"Benevento",IT281000:"Napoli 1",IT282000:"Napoli 2",IT084000:"Salerno",IT019000:"Potenza",IT014000:"Foggia",IT015000:"Brindisi",IT016000:"Lecce",IT017000:"Taranto",IT018000:"Bari",IT085000:"Catanzaro",IT086000:"Gioia Tauro",IT087000:"Reggio Calabria",IT291000:"Catania",IT292000:"Palermo",IT096000:"Porto Empedocle",IT097000:"Trapani",IT098000:"Messina",IT099000:"Siracusa",IT043000:"Sassari",IT044000:"Cagliari",IT922103:"ADM — Ufficio AEO e semplificazioni",IT922104:"ADM — Ufficio Tariffa e Dazi",IT922105:"ADM — Ufficio Tributi Doganali",IT922106:"ADM — Ufficio Regimi e Traffici di Confine",CH001731:"Zoll Nord — Pratteln / Basel (CH)",CH001801:"Zoll Nord — Basel/Weil Rhein-Autobahn (CH)",CH001841:"Zoll Nord — Basel/St. Louis Autobahn (CH)",CH003110:"Basel/Mulhouse Airport (CH/FR)",CH004031:"Dogana Ticino — Chiasso Strada (CH)",CH004041:"Dogana Ticino — Chiasso Brogeda (CH)",CH004061:"Dogana Ticino — Stabio/Gaggiolo (CH)",CH004071:"Dogana Ticino — Ponte Tresa (CH)",CH004081:"Dogana Ticino — Zenna/Luino (CH)",CH006031:"Dogana Est — St. Margrethen (CH)",CH007011:"Dogana Est — Buchs SG (CH)",NL000396:"Amsterdam Airport Schiphol (NL)",NL000399:"Rotterdam — Maasvlakte (NL)",NL003000:"Rotterdam — Botlek (NL)",DE004700:"Hamburg Airport (DE)",DE006200:"Frankfurt Airport (DE)",DE008000:"Muenchen Airport (DE)",FR001300:"Paris CDG Airport (FR)",FR002100:"Marseille Port (FR)",BE000100:"Bruxelles Nationaal Airport (BE)",BE000200:"Antwerpen Port (BE)",ES000100:"Barcelona Port (ES)",ES001300:"Madrid Barajas Airport (ES)",GB000060:"Heathrow Airport (GB)",GB003110:"Dover Port (GB)",PL000100:"Warszawa Okecie Airport (PL)",AT000100:"Wien Flughafen (AT)",SE000100:"Stockholm Arlanda (SE)",DK000200:"Copenhagen Airport (DK)",FI000100:"Helsinki-Vantaa Airport (FI)",
+};
+
+function getOffice(code) {
+  if (!code) return { name:"—", code:"", unknown:false };
+  const name = OFFICES[code];
+  if (name) return { name, code, unknown:false };
+  const nation = NATIONS[code.substring(0,2)];
+  return { name: nation ? "Ufficio doganale — " + nation : code, code, unknown:true };
+}
+
+function ivistoFmtDate(d) {
+  if (!d) return "—";
+  try {
+    const p = d.includes("T") ? d.split("T")[0] : d;
+    const [y,m,dd] = p.split("-");
+    const mo = ["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+    return parseInt(dd) + " " + mo[parseInt(m)-1] + " " + y;
+  } catch(e) { return d; }
+}
+
+function ivSb(label, value, full, mono) {
+  return '<div class="stat-box' + (full?" full":"") + '">' +
+    '<div class="stat-label">' + label + '</div>' +
+    '<div class="stat-value' + (mono?" mono":"") + '">' + value + '</div>' +
+    '</div>';
+}
+
+function officeBox(label, code, full) {
+  const o = getOffice(code);
+  const unk = o.unknown ? '<span class="tag-unknown">non in rubrica</span>' : "";
+  const sub = o.code ? '<div class="stat-sub">' + o.code + '</div>' : "";
+  return '<div class="stat-box' + (full?" full":"") + '">' +
+    '<div class="stat-label">' + label + '</div>' +
+    '<div class="stat-value">' + o.name + unk + '</div>' +
+    sub + '</div>';
+}
+
+function renderDoc(xml) {
+  let doc;
+  try { doc = new DOMParser().parseFromString(xml, "application/xml"); } catch(e) { return null; }
+  if (doc.getElementsByTagName("parsererror").length) return null;
+
+  const req = {
+    "MRN":"MRN (Movement Reference Number)",
+    "ExitControlResult":"ExitControlResult (esito controllo uscita)",
+    "preparationDateAndTime":"preparationDateAndTime (data conclusione uscita)",
+    "referenceNumber":"referenceNumber (codice ufficio doganale)",
+  };
+  const missing = Object.entries(req).filter(([t]) => !doc.getElementsByTagName(t).length).map(([,l]) => l);
+  if (missing.length) return { error:"Il file XML caricato non e' un messaggio CC599C (IVISTO).<br>Tag obbligatori mancanti:<ul>" + missing.map(m => "<li>" + m + "</li>").join("") + "</ul>" };
+
+  const refs = [...doc.getElementsByTagName("referenceNumber")];
+  const exportRef = refs[0]?.textContent || null;
+  const exitRef = refs[1]?.textContent || null;
+  const destNode = doc.getElementsByTagName("CustomsOfficeOfDestination")[0];
+  const destRef = destNode ? destNode.getElementsByTagName("referenceNumber")[0]?.textContent : null;
+  const mrn = doc.getElementsByTagName("MRN")[0]?.textContent || null;
+  const transit = doc.getElementsByTagName("transit")[0]?.textContent === "1";
+  const rc = doc.getElementsByTagName("code")[0]?.textContent || null;
+  const exitDate = doc.getElementsByTagName("exitDate")[0]?.textContent || null;
+  const prepDate = doc.getElementsByTagName("preparationDateAndTime")[0]?.textContent || null;
+  const msgId = doc.getElementsByTagName("messageIdentification")[0]?.textContent || null;
+  const sender = doc.getElementsByTagName("messageSender")[0]?.textContent || null;
+  const suppDocs = [...doc.getElementsByTagName("SupportingDocument")].map(sd => ({type:sd.getElementsByTagName("type")[0]?.textContent || "", ref:sd.getElementsByTagName("referenceNumber")[0]?.textContent || ""}));
+
+  const code = EXIT_CODES[rc] || { label:"Codice "+(rc||"?"), desc:"Codice esito non riconosciuto (tabella CL393).", cls:"default", dot:"neutral", badge:"badge-neutral" };
+  const rcls = rc ? "result-"+rc.charAt(0) : "result-default";
+
+  const suppHTML = suppDocs.length ? '<div class="doc-section">' +
+    '<div class="doc-section-title">Documenti di supporto (' + suppDocs.length + ')</div>' +
+    suppDocs.map(sd => '<div class="stat-grid" style="margin-bottom:8px">' + ivSb("Tipo documento", sd.type) + ivSb("Riferimento", sd.ref, false, true) + '</div>').join("") + '</div>' : "";
+
+  return '<div class="card">' +
+    '<div class="card-head"><span>Notifica di Uscita &mdash; CC599C</span>' +
+      '<span class="badge ' + code.badge + '"><span class="dot dot-' + code.dot + '" style="margin-right:4px"></span>' + code.label + '</span>' +
+    '</div>' +
+    '<div class="doc-section">' +
+      '<div class="doc-section-title">Esito controllo uscita</div>' +
+      '<div class="result-block ' + rcls + '">' +
+        '<div class="result-code">' + (rc||"—") + ' &mdash; ' + code.label + '</div>' +
+        '<div class="result-desc">' + code.desc + '</div>' +
+      '</div>' +
+      '<div class="stat-grid">' +
+        ivSb("Data uscita effettiva", ivistoFmtDate(exitDate)) +
+        ivSb("Uscita conclusa in data", ivistoFmtDate(prepDate)) +
+        ivSb("Movimento in transito", transit ? "Si" : "No") +
+      '</div>' +
+    '</div>' +
+    '<div class="doc-section">' +
+      '<div class="doc-section-title">Dichiarazione di esportazione</div>' +
+      '<div class="stat-grid">' +
+        ivSb("MRN &mdash; Movement Reference Number", mrn||"—", true, true) +
+        officeBox("Ufficio doganale di esportazione", exportRef) +
+        officeBox("Ufficio doganale di uscita effettiva", exitRef) +
+        (destRef ? officeBox("Ufficio doganale di destinazione (transito)", destRef, true) : "") +
+      '</div>' +
+    '</div>' +
+    suppHTML +
+    '<div class="doc-section">' +
+      '<div class="doc-section-title">Dati messaggio</div>' +
+      '<div class="stat-grid">' +
+        ivSb("Tipo messaggio", "CC599C") +
+        ivSb("Mittente sistema", sender||"—") +
+        ivSb("ID messaggio", msgId||"—", true, true) +
+      '</div>' +
+    '</div>' +
+    '<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">' +
+      '<p class="note-text">Il messaggio CC599C e\' la notifica ufficiale di uscita delle merci dal territorio doganale dell\'Unione Europea, generata dal sistema AES/ECS2 PLUS. ' +
+        'Sostituisce il precedente IE599 e costituisce prova di esportazione valida ai fini dell\'aliquota IVA zero ex art. 8 DPR 633/72 (per esiti A1 e A2). ' +
+        'Codici uffici aggiornati ad aprile 2025 &mdash; fonti: ADM lista uffici ufficiale + avviso CNSD 02/04/2025.</p>' +
+      '<p id="printDate" style="display:none;font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)">Stampato il: <span id="printDateVal"></span></p>' +
+    '</div>' +
+  '</div>';
+}
+
+function ivistoClearDoc() {
+  ["out","errBox"].forEach(id => { const el=document.getElementById(id); el.style.display="none"; el.innerHTML=""; });
+  document.getElementById("tb").style.display = "none";
+  document.getElementById("uploadCard").style.display = "block";
+  document.getElementById("fi").value = "";
+  document.getElementById("xmlPaste").value = "";
+  ivistoSwitchTab("file");
+}
+
+function processXML(text) {
+  const result = renderDoc(text);
+  if (!result) {
+    document.getElementById("errBox").innerHTML = '<div class="alert alert-err">File XML non valido o non leggibile.</div>';
+    document.getElementById("errBox").style.display = "block";
+    return;
+  }
+  if (result.error) {
+    document.getElementById("errBox").innerHTML = '<div class="alert alert-err">' + result.error + '</div>';
+    document.getElementById("errBox").style.display = "block";
+    document.getElementById("uploadCard").style.display = "block";
+    return;
+  }
+  document.getElementById("out").innerHTML = result;
+  document.getElementById("out").style.display = "block";
+  document.getElementById("tb").style.display = "flex";
+  document.getElementById("uploadCard").style.display = "none";
+  document.getElementById("errBox").style.display = "none";
+}
+
+function ivistoSwitchTab(name) {
+  document.querySelectorAll("#ivisto-panel .tab-btn").forEach((b,i) => b.classList.toggle("active", ["file","paste"][i] === name));
+  document.getElementById("tab-file").classList.toggle("active", name === "file");
+  document.getElementById("tab-paste").classList.toggle("active", name === "paste");
+}
+
+function ivistoAnalyzeText() {
+  const text = document.getElementById("xmlPaste").value.trim();
+  if (!text) return;
+  processXML(text);
+}
+
+document.getElementById("fi").addEventListener("change", function() {
+  if (!this.files[0]) return;
+  const r = new FileReader(); r.onload = e => processXML(e.target.result); r.readAsText(this.files[0]);
+});
+
+const dz = document.getElementById("dropZone");
+dz.addEventListener("dragover",  e => { e.preventDefault(); dz.style.borderColor = "var(--accent)"; });
+dz.addEventListener("dragleave", () => { dz.style.borderColor = "var(--border2)"; });
+dz.addEventListener("drop", e => {
+  e.preventDefault(); dz.style.borderColor = "var(--border2)";
+  const f = e.dataTransfer.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = ev => processXML(ev.target.result); r.readAsText(f);
+});
+
+window.addEventListener("beforeprint", () => {
+  const el = document.getElementById("printDate"), val = document.getElementById("printDateVal");
+  if (!el||!val) return;
+  const now = new Date(), mo = ["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+  val.textContent = now.getDate() + " " + mo[now.getMonth()] + " " + now.getFullYear();
+  el.style.display = "block";
+});
+window.addEventListener("afterprint", () => {
+  const el = document.getElementById("printDate"); if (el) el.style.display = "none";
+});
 </script>
 </body>
 </html>
