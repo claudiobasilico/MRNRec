@@ -1577,7 +1577,12 @@ HTML = r"""<!DOCTYPE html>
   #ivisto-panel #printDate { display: none; }
 
   @media print {
-    #ivisto-panel .main { max-width: 100%; padding: 0; }
+    body { background: #fff; color: #111; font-size: 11px; }
+    .topbar, .tabs, #tab-rec, #tab-admin { display: none !important; }
+    .wrap { max-width: 100%; padding: 0; margin: 0; }
+    #tab-ivisto { display: block !important; }
+    #ivisto-panel { padding: 0; }
+    #ivisto-panel .main { max-width: 100%; padding: 0; margin: 0; }
     #ivisto-panel .card { background: #fff; border: 1px solid #ccc; padding: 12px; margin-bottom: 10px; box-shadow: none; }
     #ivisto-panel .card-head { color: #555; border-bottom-color: #ccc; margin-bottom: 10px; padding-bottom: 6px; }
     #ivisto-panel .stat-box { background: #f5f5f5; border-color: #ddd; padding: 8px 10px; }
