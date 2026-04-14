@@ -1263,6 +1263,41 @@ async def admin_logs(
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# IVISTO CC599C — Consumo token su visualizzazione
+# ════════════════════════════════════════════════════════════════════════════
+@app.post("/api/ivisto/process")
+async def ivisto_process(
+    body: dict,
+    token: str = Depends(require_token),
+):
+    """Valida e processa CC599C, consuma 1 token, ritorna status."""
+    xml = body.get("xml", "").strip()
+
+    if not xml:
+        raise HTTPException(400, "XML vuoto")
+
+    # Validazione minima: check che sia XML ben formato e abbia i tag obbligatori
+    try:
+        if "<?xml" not in xml and "<MRN" not in xml:
+            return {"valid": False, "error": "Non sembra un file CC599C"}
+
+        required = ["MRN", "ExitControlResult", "preparationDateAndTime", "referenceNumber"]
+        for tag in required:
+            if f"<{tag}" not in xml:
+                return {"valid": False, "error": f"Tag obbligatorio mancante: {tag}"}
+
+        # Valido: consuma 1 token
+        consume_rows(token, 1)
+        write_log(token, "ivisto_visualize", {"status": "success"})
+
+        return {"valid": True}
+
+    except Exception as e:
+        write_log(token, "ivisto_visualize", {"status": "error", "error": str(e)})
+        raise HTTPException(500, "Errore durante elaborazione")
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # FRONTEND — HTML inline (singolo modulo)
 # ════════════════════════════════════════════════════════════════════════════
 HTML = r"""<!DOCTYPE html>
@@ -2828,11 +2863,33 @@ function processXML(text) {
     document.getElementById("uploadCard").style.display = "block";
     return;
   }
-  document.getElementById("out").innerHTML = result;
-  document.getElementById("out").style.display = "block";
-  document.getElementById("tb").style.display = "flex";
-  document.getElementById("uploadCard").style.display = "none";
-  document.getElementById("errBox").style.display = "none";
+
+  // Consuma 1 token server-side prima di mostrare il risultato
+  fetch("/api/ivisto/process", {
+    method: "POST",
+    headers: { "X-Token": TOKEN, "Content-Type": "application/json" },
+    body: JSON.stringify({ xml: text })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.valid) {
+      document.getElementById("errBox").innerHTML = '<div class="alert alert-err">' + (data.error || "Errore') + '</div>';
+      document.getElementById("errBox").style.display = "block";
+      document.getElementById("uploadCard").style.display = "block";
+      return;
+    }
+    // OK: mostra il risultato
+    document.getElementById("out").innerHTML = result;
+    document.getElementById("out").style.display = "block";
+    document.getElementById("tb").style.display = "flex";
+    document.getElementById("uploadCard").style.display = "none";
+    document.getElementById("errBox").style.display = "none";
+  })
+  .catch(err => {
+    const msg = err.message || "Errore di connessione";
+    document.getElementById("errBox").innerHTML = '<div class="alert alert-err">' + msg + '</div>';
+    document.getElementById("errBox").style.display = "block";
+  });
 }
 
 function ivistoSwitchTab(name) {
