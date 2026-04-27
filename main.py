@@ -2286,6 +2286,33 @@ HTML = r"""<!DOCTYPE html>
   <!-- TAB: FATTURAZIONE -->
   <div class="tab-pane" id="tab-fat">
     <div class="main" style="max-width:860px">
+
+      <!-- Istruzioni estrazione file -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head" style="cursor:pointer;user-select:none" onclick="fatToggleHelp(this)">
+          Come estrarre il file da app2do.it
+          <span id="fatHelpArrow" style="float:right;font-size:.85rem;color:var(--muted)">&#9660;</span>
+        </div>
+        <div id="fatHelpBody" style="display:none;margin-top:12px">
+          <ol style="margin:0;padding-left:1.4em;line-height:2;font-size:.9rem;color:var(--text2)">
+            <li>Accedi a <a href="https://www.app2do.it" target="_blank" rel="noopener"
+                style="color:var(--accent)">www.app2do.it</a></li>
+            <li>Nel menu principale scegli <strong>Bollette</strong></li>
+            <li>Vai su <strong>Gestione &rarr; MRN pervenuti</strong></li>
+            <li>Applica i filtri sul campo <strong>Data acquisizione</strong>:<br>
+              <span style="font-family:var(--mono);font-size:.82rem;background:var(--surface2);padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px">
+                Data acquisizione &ge; <em>data inizio</em> &nbsp;&nbsp; Data acquisizione &le; <em>data fine</em>
+              </span>
+            </li>
+            <li>Clicca <strong>Stampa</strong> e scegli l'opzione <strong>Esporta in Excel</strong></li>
+            <li>Salva il file <code style="font-size:.82rem">.xls</code> e caricalo qui sotto</li>
+          </ol>
+          <div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--accent);font-size:.82rem;color:var(--muted)">
+            Il file esportato da app2do.it &egrave; in formato HTML rinominato .xls &mdash; SIRIO lo gestisce correttamente senza conversioni.
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-head">Carica estratto cassetto doganale</div>
         <div class="fat-drop" id="fatDrop"
@@ -3325,6 +3352,13 @@ dz.addEventListener("drop", e => {
 });
 
 // ── FATTURAZIONE ───────────────────────────────────────────────────────────
+function fatToggleHelp(hdr) {
+  const body = document.getElementById('fatHelpBody');
+  const arrow = document.getElementById('fatHelpArrow');
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  arrow.innerHTML = open ? '&#9650;' : '&#9660;';
+}
 function fatDragOver(e) { e.preventDefault(); document.getElementById('fatDrop').classList.add('over'); }
 function fatDragLeave(e) { document.getElementById('fatDrop').classList.remove('over'); }
 function fatDropFile(e) {
