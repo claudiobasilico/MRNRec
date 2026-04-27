@@ -1480,7 +1480,8 @@ def build_fatturazione_excel(records: list) -> bytes:
 
     # ── TAB PER DICHIARANTE ────────────────────────────────────────────────────
     for dich, info in sorted_dichs:
-        tab_name = (dich[:28] + '...') if len(dich) > 31 else dich
+        tab_label = info['desc'] or dich
+        tab_name = (tab_label[:28] + '...') if len(tab_label) > 31 else tab_label
         ws2 = wb.create_sheet(title=tab_name)
         ws2.sheet_view.showGridLines = False
         giorni = info['giorni']
@@ -1499,13 +1500,13 @@ def build_fatturazione_excel(records: list) -> bytes:
 
         # Riga 1: titolo
         ws2.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n_cols)
-        c = ws2.cell(1, 1, 'SIRIO · Suite Doganale — Dettaglio Operazioni per Dichiarante')
+        c = ws2.cell(1, 1, f'SIRIO · Suite Doganale — {info["desc"] or dich}')
         c.font = F_TITLE; c.alignment = AL_L
         ws2.row_dimensions[1].height = 24
 
         # Riga 2: info dichiarante
         ws2.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n_cols)
-        c = ws2.cell(2, 1, f'Dichiarante: {dich}   |   {info["desc"] or "—"}')
+        c = ws2.cell(2, 1, f'CF/P.IVA: {dich}   |   {info["desc"] or "—"}')
         c.font = F_MUTED; c.alignment = AL_L
         ws2.row_dimensions[2].height = 16
         ws2.row_dimensions[3].height = 8
