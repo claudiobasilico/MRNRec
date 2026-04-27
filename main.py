@@ -1298,6 +1298,329 @@ async def ivisto_process(
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# FATTURAZIONE — Analisi cassetto doganale per emissione fatture
+# ════════════════════════════════════════════════════════════════════════════
+
+EXPORT_REGS   = {'01', '1T', '2T', '02', '3T', '03'}
+TRANSITO_REGS = {'08', '8T'}
+
+def _reg_category(reg: str) -> str:
+    if reg in EXPORT_REGS:   return 'Export'
+    if reg in TRANSITO_REGS: return 'Transito'
+    return 'Import'
+
+def parse_cassetto_xls(data: bytes) -> list[dict]:
+    from html.parser import HTMLParser as _HP
+    class _P(_HP):
+        def __init__(self):
+            super().__init__()
+            self.rows = []; self.cr = []; self.cc = ''; self.in_td = False
+        def handle_starttag(self, tag, attrs):
+            if tag == 'tr': self.cr = []
+            elif tag == 'td': self.in_td = True; self.cc = ''
+        def handle_endtag(self, tag):
+            if tag == 'td': self.cr.append(self.cc.strip()); self.in_td = False
+            elif tag == 'tr' and self.cr: self.rows.append(self.cr)
+        def handle_data(self, data):
+            if self.in_td: self.cc += data
+    p = _P()
+    p.feed(data.decode('utf-8', 'replace'))
+    raw = p.rows
+    if not raw:
+        return []
+    hdr = raw[0]
+    def ci(n): return hdr.index(n) if n in hdr else -1
+    mrn_i = ci('MRN'); dich_i = ci('Dichiarante Invio')
+    desc_i = ci('Desc. Dich.'); dtacc_i = ci('Data Accettazione')
+    if any(x < 0 for x in [mrn_i, dich_i, dtacc_i]):
+        raise ValueError("Colonne obbligatorie mancanti (MRN, Dichiarante Invio, Data Accettazione)")
+    result = []
+    for row in raw[1:]:
+        if len(row) <= max(mrn_i, dich_i, dtacc_i):
+            continue
+        mrn = row[mrn_i].strip()
+        if not mrn:
+            continue
+        registro = mrn[7:9] if len(mrn) >= 9 else '??'
+        dt_raw = row[dtacc_i].strip()
+        dt = None
+        if dt_raw:
+            for fmt in ('%d/%m/%Y %H:%M', '%d/%m/%Y'):
+                try: dt = datetime.strptime(dt_raw, fmt).date(); break
+                except: pass
+        desc = row[desc_i].strip() if desc_i >= 0 and len(row) > desc_i else ''
+        result.append({
+            'mrn': mrn, 'registro': registro,
+            'categoria': _reg_category(registro),
+            'dichiarante': row[dich_i].strip(),
+            'desc': desc, 'data': dt,
+        })
+    return result
+
+
+def build_fatturazione_excel(records: list) -> bytes:
+    from collections import defaultdict
+    from openpyxl.utils import get_column_letter
+    wb = Workbook()
+
+    # Colori
+    C_HDR_DARK = PatternFill('solid', fgColor='1E3A5F')
+    C_HDR_EXP  = PatternFill('solid', fgColor='1B5E20')
+    C_HDR_TRA  = PatternFill('solid', fgColor='BF360C')
+    C_HDR_IMP  = PatternFill('solid', fgColor='0D47A1')
+    C_HDR_TOT  = PatternFill('solid', fgColor='37474F')
+    C_EXP      = PatternFill('solid', fgColor='E8F5E9')
+    C_TRA      = PatternFill('solid', fgColor='FBE9E7')
+    C_IMP      = PatternFill('solid', fgColor='E3F2FD')
+    C_TOT_ROW  = PatternFill('solid', fgColor='FFF9C4')
+    C_ALT      = PatternFill('solid', fgColor='F5F5F5')
+
+    F_WHITE = Font(name='Calibri', bold=True, color='FFFFFF', size=10)
+    F_BOLD  = Font(name='Calibri', bold=True, size=10)
+    F_NORM  = Font(name='Calibri', size=10)
+    F_MUTED = Font(name='Calibri', size=9, color='777777')
+    F_TITLE = Font(name='Calibri', bold=True, size=13, color='1E3A5F')
+
+    AL_CTR = Alignment(horizontal='center', vertical='center')
+    AL_L   = Alignment(horizontal='left',   vertical='center')
+
+    thin = Side(style='thin', color='CCCCCC')
+    BD   = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    # Raccolta dati
+    by_dich = defaultdict(lambda: {'desc': '', 'giorni': defaultdict(lambda: defaultdict(int))})
+    found_regs = {'Export': set(), 'Transito': set(), 'Import': set()}
+    for r in records:
+        d = r['dichiarante']
+        if r['desc']:
+            by_dich[d]['desc'] = r['desc']
+        if r['data']:
+            by_dich[d]['giorni'][r['data']][r['registro']] += 1
+        found_regs[r['categoria']].add(r['registro'])
+
+    def ordered_regs(cat, found):
+        fixed = {'Export': ['01','1T','2T','02','3T','03'],
+                 'Transito': ['8T','08'],
+                 'Import': ['04','4T','06','6T','7T','07']}
+        base = [r for r in fixed.get(cat, []) if r in found]
+        extras = sorted(found - set(fixed.get(cat, [])))
+        return base + extras
+
+    exp_regs = ordered_regs('Export',   found_regs['Export'])
+    tra_regs = ordered_regs('Transito', found_regs['Transito'])
+    imp_regs = ordered_regs('Import',   found_regs['Import'])
+
+    hdr_fill_map = {
+        'Export': C_HDR_EXP, 'Export_tot': C_HDR_EXP,
+        'Transito': C_HDR_TRA, 'Transito_tot': C_HDR_TRA,
+        'Import': C_HDR_IMP, 'Import_tot': C_HDR_IMP,
+        'grand': C_HDR_TOT,
+    }
+    fill_map = {
+        'Export': C_EXP, 'Export_tot': C_EXP,
+        'Transito': C_TRA, 'Transito_tot': C_TRA,
+        'Import': C_IMP, 'Import_tot': C_IMP,
+        'grand': None,
+    }
+
+    # ── TAB RIEPILOGO ──────────────────────────────────────────────────────────
+    ws = wb.active
+    ws.title = 'Riepilogo'
+    ws.sheet_view.showGridLines = False
+
+    ws.merge_cells('A1:F1')
+    c = ws['A1']; c.value = 'SIRIO · Suite Doganale — Report Fatturazione'
+    c.font = F_TITLE; c.alignment = AL_L
+    ws.row_dimensions[1].height = 24
+
+    dates_all = [r['data'] for r in records if r['data']]
+    period_str = (f'Periodo: {min(dates_all).strftime("%d/%m/%Y")} — {max(dates_all).strftime("%d/%m/%Y")}'
+                  f'   |   Operazioni totali: {len(records)}') if dates_all else f'Operazioni totali: {len(records)}'
+    ws.merge_cells('A2:F2')
+    c = ws['A2']; c.value = period_str; c.font = F_MUTED; c.alignment = AL_L
+    ws.row_dimensions[2].height = 16
+    ws.row_dimensions[3].height = 8
+
+    hdrs_r = ['Dichiarante (CF)', 'Ragione Sociale', 'Export', 'Transito', 'Import', 'TOTALE']
+    fills_r = [C_HDR_DARK, C_HDR_DARK, C_HDR_EXP, C_HDR_TRA, C_HDR_IMP, C_HDR_TOT]
+    ws.row_dimensions[4].height = 20
+    for ci_i, (h, fill) in enumerate(zip(hdrs_r, fills_r), 1):
+        c = ws.cell(4, ci_i, h); c.font = F_WHITE; c.fill = fill; c.border = BD; c.alignment = AL_CTR
+
+    grand = [0, 0, 0, 0]
+    sorted_dichs = sorted(by_dich.items())
+    for row_i, (dich, info) in enumerate(sorted_dichs, 5):
+        g = info['giorni']
+        exp_t = sum(cnt for day in g.values() for reg, cnt in day.items() if reg in EXPORT_REGS)
+        tra_t = sum(cnt for day in g.values() for reg, cnt in day.items() if reg in TRANSITO_REGS)
+        imp_t = sum(cnt for day in g.values() for reg, cnt in day.items() if _reg_category(reg) == 'Import')
+        tot   = exp_t + tra_t + imp_t
+        grand[0] += exp_t; grand[1] += tra_t; grand[2] += imp_t; grand[3] += tot
+        alt = C_ALT if row_i % 2 == 0 else None
+        row_vals  = [dich, info['desc'], exp_t or '', tra_t or '', imp_t or '', tot]
+        row_fills = [alt, alt, C_EXP, C_TRA, C_IMP, None]
+        row_alns  = [AL_L, AL_L, AL_CTR, AL_CTR, AL_CTR, AL_CTR]
+        ws.row_dimensions[row_i].height = 18
+        for ci_i, (v, fill, aln) in enumerate(zip(row_vals, row_fills, row_alns), 1):
+            c = ws.cell(row_i, ci_i, v); c.font = F_NORM; c.border = BD; c.alignment = aln
+            if fill: c.fill = fill
+
+    tr = 4 + len(sorted_dichs) + 1
+    ws.row_dimensions[tr].height = 20
+    for ci_i, v in enumerate(['', 'TOTALE GENERALE', grand[0], grand[1], grand[2], grand[3]], 1):
+        c = ws.cell(tr, ci_i, v); c.font = F_BOLD; c.fill = C_TOT_ROW; c.border = BD; c.alignment = AL_CTR
+
+    ws.column_dimensions['A'].width = 22
+    ws.column_dimensions['B'].width = 40
+    ws.column_dimensions['C'].width = 12
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 12
+    ws.column_dimensions['F'].width = 12
+    ws.freeze_panes = 'A5'
+
+    # ── TAB PER DICHIARANTE ────────────────────────────────────────────────────
+    for dich, info in sorted_dichs:
+        tab_name = (dich[:28] + '...') if len(dich) > 31 else dich
+        ws2 = wb.create_sheet(title=tab_name)
+        ws2.sheet_view.showGridLines = False
+        giorni = info['giorni']
+        sorted_dates = sorted(giorni.keys())
+
+        # colonne: Data + per ogni reg/totale
+        cols = []  # (label, registro|None, cat_key)
+        for reg in exp_regs: cols.append((reg,           reg,  'Export'))
+        cols.append(('Tot. Export',   None, 'Export_tot'))
+        for reg in tra_regs: cols.append((reg,           reg,  'Transito'))
+        cols.append(('Tot. Transito', None, 'Transito_tot'))
+        for reg in imp_regs: cols.append((reg,           reg,  'Import'))
+        cols.append(('Tot. Import',   None, 'Import_tot'))
+        cols.append(('TOTALE',        None, 'grand'))
+        n_cols = 1 + len(cols)
+
+        # Riga 1: titolo
+        ws2.merge_cells(start_row=1, start_column=1, end_row=1, end_column=n_cols)
+        c = ws2.cell(1, 1, 'SIRIO · Suite Doganale — Dettaglio Operazioni per Dichiarante')
+        c.font = F_TITLE; c.alignment = AL_L
+        ws2.row_dimensions[1].height = 24
+
+        # Riga 2: info dichiarante
+        ws2.merge_cells(start_row=2, start_column=1, end_row=2, end_column=n_cols)
+        c = ws2.cell(2, 1, f'Dichiarante: {dich}   |   {info["desc"] or "—"}')
+        c.font = F_MUTED; c.alignment = AL_L
+        ws2.row_dimensions[2].height = 16
+        ws2.row_dimensions[3].height = 8
+
+        # Riga 4: header categoria (merge per gruppo)
+        ws2.row_dimensions[4].height = 16
+        c = ws2.cell(4, 1); c.fill = C_HDR_DARK; c.border = BD
+        cat_groups: list[tuple] = []
+        cur_cat = None; cur_start = 2
+        for idx, (lbl, reg, cat) in enumerate(cols):
+            base = cat.replace('_tot', '')
+            if base != cur_cat:
+                if cur_cat is not None:
+                    cat_groups.append((cur_cat, cur_start, 1 + idx))
+                cur_cat = base; cur_start = 2 + idx
+        if cur_cat is not None:
+            cat_groups.append((cur_cat, cur_start, 1 + len(cols)))
+
+        cat_labels = {'Export': 'EXPORT', 'Transito': 'TRANSITO', 'Import': 'IMPORT', 'grand': ''}
+        for cat, cs, ce in cat_groups:
+            if cs == ce:
+                c = ws2.cell(4, cs); c.fill = hdr_fill_map.get(cat, C_HDR_DARK); c.border = BD
+            else:
+                ws2.merge_cells(start_row=4, start_column=cs, end_row=4, end_column=ce)
+                c = ws2.cell(4, cs)
+                c.value = cat_labels.get(cat, cat)
+                c.font = F_WHITE; c.fill = hdr_fill_map.get(cat, C_HDR_DARK)
+                c.border = BD; c.alignment = AL_CTR
+
+        # Riga 5: header colonne
+        ws2.row_dimensions[5].height = 20
+        c = ws2.cell(5, 1, 'Data Accettazione')
+        c.font = F_WHITE; c.fill = C_HDR_DARK; c.border = BD; c.alignment = AL_CTR
+        for idx, (lbl, reg, cat) in enumerate(cols, 2):
+            is_tot = '_tot' in cat or cat == 'grand'
+            c = ws2.cell(5, idx, lbl)
+            c.font = F_WHITE
+            c.fill = C_HDR_TOT if is_tot else hdr_fill_map.get(cat, C_HDR_DARK)
+            c.border = BD; c.alignment = AL_CTR
+
+        ws2.freeze_panes = 'A6'
+
+        # Righe dati
+        col_totals: dict = defaultdict(int)
+        for row_i, dt in enumerate(sorted_dates, 6):
+            ws2.row_dimensions[row_i].height = 17
+            day = giorni[dt]
+            day_exp = sum(day.get(r, 0) for r in exp_regs)
+            day_tra = sum(day.get(r, 0) for r in tra_regs)
+            day_imp = sum(day.get(r, 0) for r in imp_regs)
+            day_tot = day_exp + day_tra + day_imp
+            alt = C_ALT if row_i % 2 == 0 else None
+            c = ws2.cell(row_i, 1, dt.strftime('%d/%m/%Y'))
+            c.font = F_NORM; c.border = BD; c.alignment = AL_CTR
+            if alt: c.fill = alt
+            for idx, (lbl, reg, cat) in enumerate(cols, 2):
+                if cat.endswith('_tot'):
+                    base = cat.replace('_tot', '')
+                    val = day_exp if base == 'Export' else day_tra if base == 'Transito' else day_imp
+                elif cat == 'grand':
+                    val = day_tot
+                else:
+                    val = day.get(reg, 0)
+                col_totals[idx] += val
+                cell_fill = fill_map.get(cat)
+                c = ws2.cell(row_i, idx, val if val else '')
+                c.font = F_NORM; c.border = BD; c.alignment = AL_CTR
+                if cell_fill: c.fill = cell_fill
+                elif alt: c.fill = alt
+
+        # Riga totali
+        tr2 = 6 + len(sorted_dates)
+        ws2.row_dimensions[tr2].height = 20
+        c = ws2.cell(tr2, 1, 'TOTALE'); c.font = F_BOLD; c.fill = C_TOT_ROW; c.border = BD; c.alignment = AL_CTR
+        for idx, (lbl, reg, cat) in enumerate(cols, 2):
+            c = ws2.cell(tr2, idx, col_totals[idx] if col_totals[idx] else '')
+            c.font = F_BOLD; c.fill = C_TOT_ROW; c.border = BD; c.alignment = AL_CTR
+
+        # Larghezze colonne
+        ws2.column_dimensions['A'].width = 22
+        for idx, (lbl, reg, cat) in enumerate(cols, 2):
+            ws2.column_dimensions[get_column_letter(idx)].width = max(len(lbl) + 2, 9)
+
+    out = BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
+@app.post("/api/fatturazione/report")
+async def fatturazione_report(
+    file: UploadFile = File(...),
+    token: str = Depends(require_token),
+):
+    if TOKENS[token].get("name") != "SIRIO_ADMIN":
+        raise HTTPException(403, "Accesso riservato all'amministratore")
+    data = await file.read()
+    try:
+        records = parse_cassetto_xls(data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if not records:
+        raise HTTPException(400, "Nessun record trovato nel file")
+    excel_bytes = build_fatturazione_excel(records)
+    write_log(token, "fatturazione_report", {"records": len(records)})
+    dates_all = [r['data'] for r in records if r['data']]
+    period = f"{min(dates_all).strftime('%Y%m%d')}_{max(dates_all).strftime('%Y%m%d')}" if dates_all else "report"
+    filename = f"fatturazione_{period}.xlsx"
+    return StreamingResponse(
+        BytesIO(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # FRONTEND — HTML inline (singolo modulo)
 # ════════════════════════════════════════════════════════════════════════════
 HTML = r"""<!DOCTYPE html>
@@ -1613,6 +1936,29 @@ HTML = r"""<!DOCTYPE html>
   /* PRINT */
   #ivisto-panel #printDate { display: none; }
 
+  /* FATTURAZIONE TAB */
+  #tab-fat .fat-drop { border: 2px dashed var(--border); border-radius: 10px; padding: 40px 20px;
+    text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+  #tab-fat .fat-drop:hover, #tab-fat .fat-drop.over { border-color: var(--accent); background: rgba(99,179,237,.06); }
+  #tab-fat .fat-drop input[type=file] { display: none; }
+  #tab-fat .fat-filename { margin-top: 10px; font-size: .85rem; color: var(--accent); font-family: var(--mono); }
+  #tab-fat .fat-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+  #tab-fat .fat-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 18px; text-align: center; min-width: 100px; }
+  #tab-fat .fat-stat-val { font-size: 1.4rem; font-weight: 600; color: var(--accent); font-family: var(--mono); }
+  #tab-fat .fat-stat-lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+  #tab-fat .fat-reg-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 8px; }
+  #tab-fat .fat-reg-table th { background: var(--surface); color: var(--muted); padding: 6px 10px;
+    text-align: left; font-weight: 500; font-size: .75rem; text-transform: uppercase; letter-spacing: .4px; }
+  #tab-fat .fat-reg-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); }
+  #tab-fat .fat-reg-table tr:last-child td { border-bottom: none; }
+  #tab-fat .fat-badge-exp { display:inline-block; background:rgba(52,199,89,.15); color:#34c759;
+    border-radius:4px; padding:1px 7px; font-size:.75rem; font-family:var(--mono); }
+  #tab-fat .fat-badge-tra { display:inline-block; background:rgba(255,149,0,.15); color:#ff9500;
+    border-radius:4px; padding:1px 7px; font-size:.75rem; font-family:var(--mono); }
+  #tab-fat .fat-badge-imp { display:inline-block; background:rgba(10,132,255,.15); color:#0a84ff;
+    border-radius:4px; padding:1px 7px; font-size:.75rem; font-family:var(--mono); }
+
   @media print {
     body { background: #fff; color: #111; font-size: 11px; }
     .topbar, .tabs, #tab-rec, #tab-admin { display: none !important; }
@@ -1714,6 +2060,7 @@ HTML = r"""<!DOCTYPE html>
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('tab-rec', this)">Riconciliazione Fatture</button>
     <button class="tab-btn" onclick="showTab('tab-ivisto', this)">IVISTO CC599C</button>
+    <button class="tab-btn" onclick="showTab('tab-fat', this)"   id="fatTabBtn"   style="display:none">Fatturazione</button>
     <button class="tab-btn" onclick="showTab('tab-admin', this)" id="adminTabBtn" style="display:none">Amministrazione</button>
   </div>
 
@@ -1935,11 +2282,49 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- TAB: FATTURAZIONE -->
+  <div class="tab-pane" id="tab-fat">
+    <div class="main" style="max-width:860px">
+      <div class="card">
+        <div class="card-head">Carica estratto cassetto doganale</div>
+        <div class="fat-drop" id="fatDrop"
+             onclick="document.getElementById('fatFileInput').click()"
+             ondragover="fatDragOver(event)" ondragleave="fatDragLeave(event)" ondrop="fatDropFile(event)">
+          <div style="font-size:2rem;margin-bottom:8px">📂</div>
+          <div style="font-weight:500">Seleziona o trascina il file XLS</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Elenco MRN XML Pervenuti — formato cassetto doganale</div>
+          <input type="file" id="fatFileInput" accept=".xls,.xlsx" onchange="fatFileSelected(this)">
+        </div>
+        <div class="fat-filename" id="fatFileName" style="display:none"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+          <button class="btn btn-primary" id="fatBtn" onclick="fatGenerate()" disabled>Genera Report</button>
+          <button class="btn btn-ghost"   id="fatClearBtn" onclick="fatClear()" style="display:none">Nuovo file</button>
+          <span id="fatSpinner" style="display:none;color:var(--muted);font-size:.85rem">Elaborazione in corso…</span>
+        </div>
+      </div>
+
+      <div id="fatPreview" style="display:none" class="card">
+        <div class="card-head">Anteprima</div>
+        <div class="fat-stats" id="fatStats"></div>
+        <div style="margin-top:20px">
+          <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Registri rilevati</div>
+          <table class="fat-reg-table" id="fatRegTable">
+            <thead><tr><th>Registro</th><th>Categoria</th><th>Operazioni</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="fatErr" class="alert alert-err" style="display:none;margin-top:12px"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 // ── STATE ──────────────────────────────────────────────────────────────────
 let TOKEN = localStorage.getItem('mrn_token') || '';
+let fatFile = null;
 let fileDogana  = null;
 let fileFatture = null;
 let lastResults = null;
@@ -1994,6 +2379,7 @@ async function initApp(me) {
   updateQuota(me);
   if (me.name === 'SIRIO_ADMIN') {
     document.getElementById('adminTabBtn').style.display = '';
+    document.getElementById('fatTabBtn').style.display = '';
     loadTokens();
     loadLogs();
   }
@@ -2936,6 +3322,121 @@ dz.addEventListener("drop", e => {
   const f = e.dataTransfer.files[0]; if (!f) return;
   const r = new FileReader(); r.onload = ev => processXML(ev.target.result); r.readAsText(f);
 });
+
+// ── FATTURAZIONE ───────────────────────────────────────────────────────────
+function fatDragOver(e) { e.preventDefault(); document.getElementById('fatDrop').classList.add('over'); }
+function fatDragLeave(e) { document.getElementById('fatDrop').classList.remove('over'); }
+function fatDropFile(e) {
+  e.preventDefault();
+  document.getElementById('fatDrop').classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) fatSetFile(f);
+}
+function fatFileSelected(inp) { if (inp.files[0]) fatSetFile(inp.files[0]); }
+function fatSetFile(f) {
+  fatFile = f;
+  const nm = document.getElementById('fatFileName');
+  nm.textContent = f.name; nm.style.display = '';
+  document.getElementById('fatBtn').disabled = false;
+  document.getElementById('fatClearBtn').style.display = '';
+  document.getElementById('fatPreview').style.display = 'none';
+  document.getElementById('fatErr').style.display = 'none';
+}
+function fatClear() {
+  fatFile = null;
+  document.getElementById('fatFileName').style.display = 'none';
+  document.getElementById('fatBtn').disabled = true;
+  document.getElementById('fatClearBtn').style.display = 'none';
+  document.getElementById('fatPreview').style.display = 'none';
+  document.getElementById('fatErr').style.display = 'none';
+  document.getElementById('fatFileInput').value = '';
+}
+async function fatGenerate() {
+  if (!fatFile) return;
+  const btn = document.getElementById('fatBtn');
+  const spin = document.getElementById('fatSpinner');
+  const errBox = document.getElementById('fatErr');
+  btn.disabled = true; spin.style.display = ''; errBox.style.display = 'none';
+  try {
+    // Anteprima lato client (parse HTML-XLS in browser)
+    const txt = await fatFile.text();
+    const preview = fatParsePreview(txt);
+    fatShowPreview(preview);
+
+    // Richiesta report al server
+    const fd = new FormData(); fd.append('file', fatFile);
+    const res = await fetch('/api/fatturazione/report', {
+      method: 'POST',
+      headers: { 'X-Token': TOKEN },
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || 'Errore server');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const cd = res.headers.get('content-disposition') || '';
+    const fnm = cd.match(/filename="([^"]+)"/)?.[1] || 'fatturazione.xlsx';
+    a.href = url; a.download = fnm; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  } catch(e) {
+    errBox.textContent = e.message; errBox.style.display = '';
+  } finally {
+    btn.disabled = false; spin.style.display = 'none';
+  }
+}
+function fatParsePreview(html) {
+  const dp = new DOMParser();
+  const doc = dp.parseFromString(html, 'text/html');
+  const rows = doc.querySelectorAll('table tr');
+  if (!rows.length) return null;
+  const hdr = [...rows[0].querySelectorAll('td')].map(td => td.textContent.trim());
+  const mrnI  = hdr.indexOf('MRN');
+  const dichI = hdr.indexOf('Dichiarante Invio');
+  const dtI   = hdr.indexOf('Data Accettazione');
+  if (mrnI < 0 || dichI < 0) return null;
+  const EXP = new Set(['01','1T','2T','02','3T','03']);
+  const TRA = new Set(['08','8T']);
+  let total = 0, exp = 0, tra = 0, imp = 0;
+  const regCount = {};
+  const dichs = new Set();
+  for (let i = 1; i < rows.length; i++) {
+    const cells = [...rows[i].querySelectorAll('td')].map(td => td.textContent.trim());
+    const mrn = cells[mrnI] || '';
+    if (!mrn) continue;
+    total++;
+    const reg = mrn.length >= 9 ? mrn.substring(7,9) : '??';
+    if (EXP.has(reg)) exp++; else if (TRA.has(reg)) tra++; else imp++;
+    regCount[reg] = (regCount[reg]||0) + 1;
+    if (cells[dichI]) dichs.add(cells[dichI]);
+  }
+  return { total, exp, tra, imp, regCount, dichs: dichs.size };
+}
+function fatShowPreview(p) {
+  if (!p) return;
+  const stats = document.getElementById('fatStats');
+  const EXP_COLOR = '#34c759'; const TRA_COLOR = '#ff9500'; const IMP_COLOR = '#0a84ff';
+  stats.innerHTML = [
+    { val: p.total,  lbl: 'Operazioni', color: 'var(--accent)' },
+    { val: p.dichs,  lbl: 'Dichiaranti', color: 'var(--accent)' },
+    { val: p.exp,    lbl: 'Export',      color: EXP_COLOR },
+    { val: p.tra,    lbl: 'Transito',    color: TRA_COLOR },
+    { val: p.imp,    lbl: 'Import',      color: IMP_COLOR },
+  ].map(s => `<div class="fat-stat"><div class="fat-stat-val" style="color:${s.color}">${s.val}</div><div class="fat-stat-lbl">${s.lbl}</div></div>`).join('');
+
+  const EXP_SET = new Set(['01','1T','2T','02','3T','03']);
+  const TRA_SET = new Set(['08','8T']);
+  const tbody = document.querySelector('#fatRegTable tbody');
+  tbody.innerHTML = Object.entries(p.regCount)
+    .sort((a,b) => b[1]-a[1])
+    .map(([reg, cnt]) => {
+      const cat = EXP_SET.has(reg) ? ['Export','fat-badge-exp'] : TRA_SET.has(reg) ? ['Transito','fat-badge-tra'] : ['Import','fat-badge-imp'];
+      return `<tr><td><span class="fat-badge-exp" style="font-family:var(--mono)">${reg}</span></td><td><span class="${cat[1]}">${cat[0]}</span></td><td style="font-family:var(--mono)">${cnt}</td></tr>`;
+    }).join('');
+  document.getElementById('fatPreview').style.display = '';
+}
 
 window.addEventListener("beforeprint", () => {
   const el = document.getElementById("printDate"), val = document.getElementById("printDateVal");
