@@ -1426,7 +1426,7 @@ def build_fatturazione_excel(records: list) -> bytes:
     # ── TAB RIEPILOGO ──────────────────────────────────────────────────────────
     ws = wb.active
     ws.title = 'Riepilogo'
-    ws.sheet_view.showGridLines = False
+
 
     ws.merge_cells('A1:F1')
     c = ws['A1']; c.value = 'SIRIO · Suite Doganale — Report Fatturazione'
