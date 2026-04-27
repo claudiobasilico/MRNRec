@@ -1363,28 +1363,31 @@ def build_fatturazione_excel(records: list) -> bytes:
     from openpyxl.utils import get_column_letter
     wb = Workbook()
 
-    # Colori
-    C_HDR_DARK = PatternFill('solid', fgColor='1E3A5F')
-    C_HDR_EXP  = PatternFill('solid', fgColor='1B5E20')
-    C_HDR_TRA  = PatternFill('solid', fgColor='BF360C')
-    C_HDR_IMP  = PatternFill('solid', fgColor='0D47A1')
-    C_HDR_TOT  = PatternFill('solid', fgColor='37474F')
-    C_EXP      = PatternFill('solid', fgColor='E8F5E9')
-    C_TRA      = PatternFill('solid', fgColor='FBE9E7')
-    C_IMP      = PatternFill('solid', fgColor='E3F2FD')
-    C_TOT_ROW  = PatternFill('solid', fgColor='FFF9C4')
-    C_ALT      = PatternFill('solid', fgColor='F5F5F5')
+    # Colori — sempre 8 cifre AARRGGBB (AA=FF = opaco) + bgColor per solid fill
+    def _fill(hex6: str) -> PatternFill:
+        return PatternFill(fill_type='solid', fgColor='FF' + hex6, bgColor='FFFFFFFF')
 
-    F_WHITE = Font(name='Calibri', bold=True, color='FFFFFF', size=10)
+    C_HDR_DARK = _fill('1E3A5F')
+    C_HDR_EXP  = _fill('1B5E20')
+    C_HDR_TRA  = _fill('BF360C')
+    C_HDR_IMP  = _fill('0D47A1')
+    C_HDR_TOT  = _fill('37474F')
+    C_EXP      = _fill('E8F5E9')
+    C_TRA      = _fill('FBE9E7')
+    C_IMP      = _fill('E3F2FD')
+    C_TOT_ROW  = _fill('FFF9C4')
+    C_ALT      = _fill('F5F5F5')
+
+    F_WHITE = Font(name='Calibri', bold=True, color='FFFFFFFF', size=10)
     F_BOLD  = Font(name='Calibri', bold=True, size=10)
     F_NORM  = Font(name='Calibri', size=10)
-    F_MUTED = Font(name='Calibri', size=9, color='777777')
-    F_TITLE = Font(name='Calibri', bold=True, size=13, color='1E3A5F')
+    F_MUTED = Font(name='Calibri', size=9, color='FF777777')
+    F_TITLE = Font(name='Calibri', bold=True, size=13, color='FF1E3A5F')
 
     AL_CTR = Alignment(horizontal='center', vertical='center')
     AL_L   = Alignment(horizontal='left',   vertical='center')
 
-    thin = Side(style='thin', color='CCCCCC')
+    thin = Side(style='thin', color='FFCCCCCC')
     BD   = Border(left=thin, right=thin, top=thin, bottom=thin)
 
     # Raccolta dati
@@ -1483,7 +1486,6 @@ def build_fatturazione_excel(records: list) -> bytes:
         tab_label = info['desc'] or dich
         tab_name = (tab_label[:28] + '...') if len(tab_label) > 31 else tab_label
         ws2 = wb.create_sheet(title=tab_name)
-        ws2.sheet_view.showGridLines = False
         giorni = info['giorni']
         sorted_dates = sorted(giorni.keys())
 
