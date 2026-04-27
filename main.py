@@ -1305,7 +1305,7 @@ HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SIRIO · Sistema di Riconciliazione</title>
+<title>SIRIO · Suite Doganale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1461,6 +1461,7 @@ HTML = r"""<!DOCTYPE html>
   .token-box {
     background: var(--card); border: 1px solid var(--border);
     border-radius: 14px; padding: 40px; width: 380px; text-align: center;
+    max-height: 90vh; overflow-y: auto;
   }
   .token-box h2 { margin-bottom: 8px; }
   .token-box p  { color: var(--muted); font-size: .9rem; margin-bottom: 24px; }
@@ -1591,12 +1592,13 @@ HTML = r"""<!DOCTYPE html>
 
   /* STAT BOXES */
   #ivisto-panel .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  #ivisto-panel .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  #ivisto-panel .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; text-align: left; }
   #ivisto-panel .stat-box.full { grid-column: 1 / -1; }
   #ivisto-panel .stat-label { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
   #ivisto-panel .stat-value { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; word-break: break-all; }
   #ivisto-panel .stat-value.mono { font-family: var(--mono); font-size: 13px; color: var(--accent); }
   #ivisto-panel .stat-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
+  #ivisto-panel .mrn-link { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; color: inherit; }
 
   /* TAG non in rubrica */
   #ivisto-panel .tag-unknown { display: inline-block; background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.2); border-radius: 3px; font-size: 9px; padding: 0 4px; color: var(--danger); margin-left: 5px; vertical-align: middle; font-family: var(--mono); }
@@ -1653,7 +1655,7 @@ HTML = r"""<!DOCTYPE html>
 <div class="token-gate" id="gate">
   <div class="token-box">
     <div style="font-size:2.5rem;margin-bottom:12px">🔐</div>
-    <h2>SIRIO · Sistema di Riconciliazione</h2>
+    <h2>SIRIO · Suite Doganale</h2>
     <p>Inserisci il token di accesso</p>
     <input type="text" id="tokenInput" placeholder="Incolla il token..." autocomplete="off" spellcheck="false">
 
@@ -1694,7 +1696,7 @@ HTML = r"""<!DOCTYPE html>
 
 <!-- TOP BAR -->
 <div class="topbar" id="topbar" style="display:none">
-  <div class="logo">SIRIO · <span>Sistema di Riconciliazione</span></div>
+  <div class="logo">SIRIO · <span>Suite Doganale</span></div>
   <div style="display:flex;align-items:center;gap:16px">
     <div class="user-chip">
       <span id="userName">—</span>
@@ -1710,7 +1712,7 @@ HTML = r"""<!DOCTYPE html>
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="showTab('tab-rec', this)">Riconciliazione</button>
+    <button class="tab-btn active" onclick="showTab('tab-rec', this)">Riconciliazione Fatture</button>
     <button class="tab-btn" onclick="showTab('tab-ivisto', this)">IVISTO CC599C</button>
     <button class="tab-btn" onclick="showTab('tab-admin', this)" id="adminTabBtn" style="display:none">Amministrazione</button>
   </div>
@@ -1959,8 +1961,9 @@ function togglePrivacyInfo() {
 
 function updateAccessButton() {
   const checkbox = document.getElementById('privacyCheckbox');
+  const token = document.getElementById('tokenInput').value.trim();
   const btn = document.getElementById('accessBtn');
-  btn.disabled = !checkbox.checked;
+  btn.disabled = !(checkbox.checked && token.length > 0);
 }
 
 // ── AUTH ───────────────────────────────────────────────────────────────────
@@ -1981,6 +1984,7 @@ async function submitToken() {
 document.getElementById('tokenInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') submitToken();
 });
+document.getElementById('tokenInput').addEventListener('input', updateAccessButton);
 
 async function initApp(me) {
   document.getElementById('gate').style.display = 'none';
@@ -2817,7 +2821,7 @@ function renderDoc(xml) {
     '<div class="doc-section">' +
       '<div class="doc-section-title">Dichiarazione di esportazione</div>' +
       '<div class="stat-grid">' +
-        ivSb("MRN &mdash; Movement Reference Number", mrn||"—", true, true) +
+        ivSb("MRN &mdash; Movement Reference Number", mrn ? '<a class="mrn-link" href="https://www.adm.gov.it/portale/notifica-di-esportazione-del-m.r.n.-movement-reference-number-" target="_blank" rel="noopener" onclick="ivistoOpenMrn(\''+mrn+'\')" title="Apri su ADM · MRN copiato negli appunti">'+mrn+' ↗</a>' : "—", true, true) +
         officeBox("Ufficio doganale di esportazione", exportRef) +
         officeBox("Ufficio doganale di uscita effettiva", exitRef) +
         (destRef ? officeBox("Ufficio doganale di destinazione (transito)", destRef, true) : "") +
@@ -2839,6 +2843,21 @@ function renderDoc(xml) {
       '<p id="printDate" style="display:none;font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)">Stampato il: <span id="printDateVal"></span></p>' +
     '</div>' +
   '</div>';
+}
+
+function ivistoOpenMrn(mrn) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(mrn).catch(() => _fallbackCopy(mrn));
+  } else {
+    _fallbackCopy(mrn);
+  }
+}
+function _fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
 }
 
 function ivistoClearDoc() {
@@ -2873,7 +2892,7 @@ function processXML(text) {
   .then(r => r.json())
   .then(data => {
     if (!data.valid) {
-      document.getElementById("errBox").innerHTML = '<div class="alert alert-err">' + (data.error || "Errore') + '</div>';
+      document.getElementById("errBox").innerHTML = '<div class="alert alert-err">' + (data.error || "Errore") + '</div>';
       document.getElementById("errBox").style.display = "block";
       document.getElementById("uploadCard").style.display = "block";
       return;
