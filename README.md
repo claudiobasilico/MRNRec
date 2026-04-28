@@ -1,12 +1,13 @@
 # SIRIO — Suite Doganale
 
-Piattaforma integrata per operazioni doganali: riconciliazione fatture/MRN e analisi notifiche di uscita CC599C.
+Piattaforma integrata per operazioni doganali: riconciliazione fatture/MRN, analisi notifiche di uscita CC599C e reportistica fatturazione.
 Singolo modulo Python — FastAPI — porta **8002**.
 
-**Tre moduli:**
+**Quattro moduli:**
 1. **Riconciliazione Fatture** — fatture cliente ↔ dichiarazioni doganali MRN
 2. **IVISTO CC599C** — visualizzazione e stampa notifiche di uscita (AES/ECS2 PLUS)
-3. **Amministrazione** — gestione token clienti e log attività (solo admin)
+3. **Fatturazione** — report Excel per emissione fatture da estratto cassetto doganale (solo admin)
+4. **Amministrazione** — gestione token clienti e log attività (solo admin)
 
 ---
 
@@ -53,7 +54,13 @@ Il token viene salvato in `data/tokens.json`.
 | Rendering | HTML con colori semantici per classe match, allineamento sinistra |
 | Stampa | Tema light automatico, nasconde UI app, stampa pulita A4 |
 | Token consumo | 1 token consumato per ogni visualizzazione documento IVISTO |
-| **Frontend** | HTML inline — dark theme — drag&drop — 3 tab (Riconciliazione Fatture, IVISTO, Amministrazione) |
+| **Fatturazione** | |
+| Parser input | Legge file XLS (formato HTML) esportato da app2do.it — cassetto doganale |
+| Filtro | Solo righe con almeno un file allegato (Nome File 1/2/3 non vuoti) |
+| Categorizzazione | Export (01/1T/2T/02/3T/03) · Transito (8T/08) · Import (resto) |
+| Registro MRN | Estratto da byte 8-9 dell'MRN |
+| Output Excel | Tab Riepilogo + 1 tab per dichiarante con breakdown giornaliero per registro |
+| **Frontend** | HTML inline — dark theme — drag&drop — 4 tab (Riconciliazione Fatture, IVISTO, Fatturazione, Amministrazione) |
 
 ---
 
@@ -74,6 +81,12 @@ Il token viene salvato in `data/tokens.json`.
 | POST | `/api/ivisto/process` | Valida XML e consuma 1 token — il parsing avviene client-side |
 
 > Il file XML CC599C non viene mai inviato al server integralmente. Il server valida solo che il token sia attivo e scala il contatore utilizzi.
+
+### Fatturazione (backend)
+
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| POST | `/api/fatturazione/report` | Analizza XLS cassetto doganale → Excel report multi-tab (solo admin) |
 
 ### Admin (backend)
 
@@ -124,6 +137,44 @@ Visualizza notifiche di uscita doganale (CC599C) emesse dal sistema AES/ECS2 PLU
 - **B1**: Difformità maggiori → contatta ufficio doganale
 - **B2**: Merce non trovata
 - **B3**: Non applicabile
+
+---
+
+## Modulo Fatturazione (solo admin)
+
+Genera un report Excel per l'emissione delle fatture del servizio di scarico dal cassetto doganale.
+
+### Come estrarre il file di input da app2do.it
+
+1. Accedi a [www.app2do.it](https://www.app2do.it)
+2. Menu principale → **Bollette**
+3. **Gestione → MRN pervenuti**
+4. Applica filtro su **Data acquisizione**: `≥ data inizio` e `≤ data fine`
+5. Clicca **Stampa** → **Esporta in Excel**
+6. Carica il file `.xls` nella scheda Fatturazione di SIRIO
+
+> Il file esportato da app2do.it è in formato HTML rinominato `.xls` — SIRIO lo gestisce nativamente.
+
+### Utilizzo
+
+1. Accedi con token ADMIN → scheda **Fatturazione**
+2. Carica il file XLS estratto da app2do.it
+3. Verifica l'anteprima: totali per categoria e breakdown registri
+4. Clicca **Genera Report** → download automatico Excel
+
+### Struttura del report Excel
+
+| Tab | Contenuto |
+|-----|-----------|
+| `Riepilogo` | Una riga per dichiarante: Export / Transito / Import / Totale del periodo |
+| `<Ragione Sociale>` × N | Per giorno: colonne per registro (01, 1T, ecc.) + totali categoria + totale giornaliero |
+
+**Categorizzazione registri MRN (byte 8-9):**
+- **Export**: `01` `1T` `2T` `02` `3T` `03`
+- **Transito**: `8T` `08`
+- **Import**: tutti gli altri (`04`, `4T`, ecc.)
+
+> Sono incluse solo le righe con almeno un file allegato (Nome File 1/2/3 non vuoti). Le dichiarazioni senza documento scaricato vengono escluse dal computo.
 
 ---
 
