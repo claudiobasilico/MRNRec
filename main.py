@@ -1332,6 +1332,7 @@ def parse_cassetto_xls(data: bytes) -> list[dict]:
     def ci(n): return hdr.index(n) if n in hdr else -1
     mrn_i = ci('MRN'); dich_i = ci('Dichiarante Invio')
     desc_i = ci('Desc. Dich.'); dtacc_i = ci('Data Accettazione')
+    nf1_i = ci('Nome File 1'); nf2_i = ci('Nome File 2'); nf3_i = ci('Nome File 3')
     if any(x < 0 for x in [mrn_i, dich_i, dtacc_i]):
         raise ValueError("Colonne obbligatorie mancanti (MRN, Dichiarante Invio, Data Accettazione)")
     result = []
@@ -1340,6 +1341,10 @@ def parse_cassetto_xls(data: bytes) -> list[dict]:
             continue
         mrn = row[mrn_i].strip()
         if not mrn:
+            continue
+        # Escludi righe senza nessun file allegato
+        def _cell(i): return row[i].strip() if i >= 0 and len(row) > i else ''
+        if not (_cell(nf1_i) or _cell(nf2_i) or _cell(nf3_i)):
             continue
         registro = mrn[7:9] if len(mrn) >= 9 else '??'
         dt_raw = row[dtacc_i].strip()
