@@ -1358,10 +1358,24 @@ def parse_cassetto_xls(data: bytes) -> list[dict]:
     return result
 
 
+def _sanitize_sheet_name(name: str) -> str:
+    """Rimuove caratteri vietati/problematici da nomi tab Excel."""
+    import re as _re
+    # Rimuove apostrofo (bug Excel), poi char vietati OOXML
+    name = name.replace("'", "").replace("\u2019", "").replace("\u2018", "")
+    name = _re.sub(r'[\\/?*\[\]:]', '-', name).strip()
+    if not name:
+        name = 'Foglio'
+    return (name[:28] + '...') if len(name) > 31 else name
+
+
 def build_fatturazione_excel(records: list) -> bytes:
     from collections import defaultdict
     from openpyxl.utils import get_column_letter
     wb = Workbook()
+    # Rimuove workbookProtection iniettato da openpyxl (causa warning Excel)
+    wb.security.lockStructure = False
+    wb.security.lockWindows = False
 
     # Colori — sempre 8 cifre AARRGGBB (AA=FF = opaco) + bgColor per solid fill
     def _fill(hex6: str) -> PatternFill:
@@ -1484,7 +1498,7 @@ def build_fatturazione_excel(records: list) -> bytes:
     # ── TAB PER DICHIARANTE ────────────────────────────────────────────────────
     for dich, info in sorted_dichs:
         tab_label = info['desc'] or dich
-        tab_name = (tab_label[:28] + '...') if len(tab_label) > 31 else tab_label
+        tab_name = _sanitize_sheet_name(tab_label)
         ws2 = wb.create_sheet(title=tab_name)
         giorni = info['giorni']
         sorted_dates = sorted(giorni.keys())
