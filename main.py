@@ -208,7 +208,13 @@ def parse_date(val) -> Optional[date]:
             pass
 
     s = str(val).strip()
-    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y", "%Y/%m/%d"):
+    for fmt in (
+        "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M",   # cassetto doganale: "30/03/2026 18:34"
+        "%d/%m/%Y",
+        "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M",   # ISO con ora
+        "%Y-%m-%d",
+        "%d-%m-%Y", "%d.%m.%Y", "%Y/%m/%d",
+    ):
         try:
             return datetime.strptime(s, fmt).date()
         except ValueError:
