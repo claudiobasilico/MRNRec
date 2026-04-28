@@ -337,7 +337,7 @@ def read_excel_rows(data: bytes, filename: str = "") -> list[dict]:
         except Exception as e:
             raise HTTPException(400, f"Errore lettura CSV: {str(e)}")
 
-    # .xls (formato legacy binario)
+    # .xls (formato legacy binario o HTML-disguised da export web)
     if ext == "xls":
         try:
             wb = xlrd.open_workbook(file_contents=data)
@@ -345,8 +345,31 @@ def read_excel_rows(data: bytes, filename: str = "") -> list[dict]:
             rows = []
             for row_idx in range(ws.nrows):
                 rows.append(ws.row_values(row_idx))
-        except Exception as e:
-            raise HTTPException(400, f"File .xls non valido: {str(e)}")
+        except Exception as xlrd_err:
+            # Prova come HTML-disguised (export da portali web come app2do.it, SIRIO, ecc.)
+            try:
+                from html.parser import HTMLParser as _HP
+                class _P(_HP):
+                    def __init__(self):
+                        super().__init__()
+                        self.rows=[]; self.cr=[]; self.cc=''; self.in_td=False
+                    def handle_starttag(self,t,a):
+                        if t=='tr': self.cr=[]
+                        elif t=='td': self.in_td=True; self.cc=''
+                    def handle_endtag(self,t):
+                        if t=='td': self.cr.append(self.cc.strip()); self.in_td=False
+                        elif t=='tr' and self.cr: self.rows.append(self.cr)
+                    def handle_data(self,d):
+                        if self.in_td: self.cc+=d
+                p = _P()
+                p.feed(data.decode('utf-8', 'replace'))
+                if not p.rows:
+                    raise ValueError("nessuna tabella trovata nell'HTML")
+                # Normalizza: ogni riga come lista di valori
+                max_cols = max(len(r) for r in p.rows)
+                rows = [r + [''] * (max_cols - len(r)) for r in p.rows]
+            except Exception:
+                raise HTTPException(400, f"File .xls non valido: {str(xlrd_err)}")
     else:
         # .xlsx (formato moderno)
         try:
