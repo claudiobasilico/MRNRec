@@ -138,6 +138,20 @@ Visualizza notifiche di uscita doganale (CC599C) emesse dal sistema AES/ECS2 PLU
 - **B2**: Merce non trovata
 - **B3**: Non applicabile
 
+### Scelte tecniche — rendering IVISTO
+
+| Aspetto | Scelta | Motivazione |
+|---------|--------|-------------|
+| **PDF/Stampa** | `window.print()` nativo browser | Nessuna dipendenza server-side (ReportLab, WeasyPrint), zero latenza, output fedele al layout |
+| **Parsing XML** | `DOMParser` browser nativo | Il file XML non viene mai inviato al server — privacy by design |
+| **Tema stampa** | CSS `@media print` separato | Converte automaticamente dark theme → layout chiaro A4 senza codice aggiuntivo |
+| **Colori semantici** | Classi `result-A1/A2/A3/B` con varianti dark + print | Stessa struttura HTML, solo la palette cambia tra schermo e carta |
+| **Rubrica uffici** | ~150 voci hardcoded JS | Evita una chiamata API per ogni documento; aggiornabile centralizzando l'oggetto `OFFICES` |
+| **Consumo token** | Validazione + decrement server-side su `/api/ivisto/process` | Il server non riceve l'XML completo (solo conferma), ma scala il contatore prima di mostrare il risultato |
+| **MRN cliccabile** | Link verso portale ADM + copia clipboard | Evita copia manuale del codice a 18 caratteri; il link ADM non accetta parametri URL quindi si copia |
+
+> Specifica di rendering dettagliata (struttura HTML, CSS completo, palette, stampa): `IVISTO_CC599C_RENDER_SPEC.md`
+
 ---
 
 ## Modulo Fatturazione (solo admin)
@@ -202,15 +216,16 @@ Genera un report Excel per l'emissione delle fatture del servizio di scarico dal
 
 ```
 MRNRec/
-├── main.py              # Tutto: server, logica, frontend HTML
+├── main.py                        # Tutto: server, logica, frontend HTML
 ├── requirements.txt
-├── avvia.bat            # Launcher Windows
+├── avvia.bat                      # Launcher Windows
 ├── README.md
-├── ALGORITHM.md         # Documentazione algoritmo di matching
-└── data/                # Auto-creata al primo avvio
-    ├── tokens.json      # Token e configurazioni
-    ├── usage.json       # Contatori utilizzo
-    ├── profiles.json    # Profili colonne salvati per utente
-    ├── activity_log.jsonl  # Log attività (JSONL)
-    └── server.log       # Log server uvicorn
+├── ALGORITHM.md                   # Documentazione algoritmo di matching fatture/MRN
+├── IVISTO_CC599C_RENDER_SPEC.md   # Specifiche di rendering CC599C (HTML, CSS, stampa)
+└── data/                          # Auto-creata al primo avvio
+    ├── tokens.json                # Token e configurazioni
+    ├── usage.json                 # Contatori utilizzo
+    ├── profiles.json              # Profili colonne salvati per utente
+    ├── activity_log.jsonl         # Log attività (JSONL)
+    └── server.log                 # Log server uvicorn
 ```
