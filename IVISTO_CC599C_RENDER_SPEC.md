@@ -35,12 +35,18 @@ Tag obbligatori (se mancanti → errore con lista):
 ### 2.2 Campi estratti
 
 ```js
-const refs = [...doc.getElementsByTagName("referenceNumber")];
-const exportRef = refs[0]?.textContent;           // ufficio esportazione
-const exitRef   = refs[1]?.textContent;           // ufficio uscita effettiva
-
-const destNode = doc.getElementsByTagName("CustomsOfficeOfDestination")[0];
-const destRef  = destNode?.getElementsByTagName("referenceNumber")[0]?.textContent; // destinazione transito
+// Uffici letti dal loro elemento, non per posizione dei referenceNumber
+// (anche i documenti di supporto hanno un referenceNumber).
+const ufficio = (...nomi) => {
+  for (const n of nomi) {
+    const v = doc.getElementsByTagName(n)[0]?.getElementsByTagName("referenceNumber")[0]?.textContent?.trim();
+    if (v) return v;
+  }
+  return null;
+};
+const exportRef = ufficio("CustomsOfficeOfExport");                            // ufficio esportazione
+const exitRef   = ufficio("CustomsOfficeOfExitActual", "CustomsOfficeOfExit"); // ufficio uscita
+const destRef   = ufficio("CustomsOfficeOfDestination");                       // destinazione transito
 
 const mrn      = doc.getElementsByTagName("MRN")[0]?.textContent;
 const transit  = doc.getElementsByTagName("transit")[0]?.textContent === "1";
@@ -55,6 +61,15 @@ const suppDocs = [...doc.getElementsByTagName("SupportingDocument")].map(sd => (
   ref:  sd.getElementsByTagName("referenceNumber")[0]?.textContent || ""
 }));
 ```
+
+Valori derivati per l'esportazione seguita da transito (`transit = 1`):
+
+```js
+const tipoTransito = suppDocs.map(sd => DOC_TIPI[sd.type]).find(Boolean) || null; // da N820/N821/N822
+const inTransito   = transit ? "Si" + (tipoTransito ? " — " + tipoTransito : "") : "No";
+```
+
+`DOC_TIPI`: `N820` Transito misto T (merci T1 e T2), `N821` Transito esterno T1, `N822` Transito comunitario interno T2.
 
 ### 2.3 Formattazione date — `ivistoFmtDate(d)`
 
@@ -85,6 +100,8 @@ function ivistoFmtDate(d) {
 | B1 | Difformità maggiori (B1) | `result-B` | `dot-danger` (rosso) | `badge-err` |
 | B2 | Non trovato (B2) | `result-B` | `dot-danger` | `badge-err` |
 | B3 | Non applicabile (B3) | `result-default` | `dot-neutral` (grigio) | `badge-neutral` |
+
+La classe del result block è `"result-" + code.cls` (A4 e A5 usano quindi `result-A3`, B3 `result-default`).
 
 Codice non in tabella → `result-default`, label `"Codice <rc>"`, desc `"Codice esito non riconosciuto (tabella CL393)."`.
 
@@ -130,10 +147,12 @@ Logica:
 1. Cerca `code` nella mappa `OFFICES` (rubrica hardcoded)
 2. Se trovato → `{ name, code, unknown: false }`
 3. Se non trovato → tenta risoluzione nazione dai primi 2 char via `NATIONS`
-4. Se nazione nota → `"Ufficio doganale — <NomeNazione>"` con `unknown: true` (mostra tag `non in rubrica`)
+4. Se nazione nota → `"Ufficio doganale — <NomeNazione> (<codice>)"` con `unknown: true` (mostra tag `non in rubrica`)
 5. Se nazione sconosciuta → mostra il codice grezzo
 
-La rubrica `OFFICES` contiene circa 150 uffici: tutti gli UADM italiani (Lombardia, Emilia-Romagna, tutte le regioni), principali aeroporti e porti europei (NL, DE, FR, BE, ES, GB, PL, AT, SE, DK, FI), e dogane svizzere di confine.
+La rubrica `OFFICES` contiene 189 uffici: tutti gli UADM italiani (Lombardia, Emilia-Romagna, tutte le regioni) con sezioni e distaccamenti, principali aeroporti e porti europei (NL, DE, FR, BE, ES, GB, PL, AT, SE, DK, FI, HR), e dogane svizzere di confine.
+
+`OFFICES`, `NATIONS` e `DOC_TIPI` sono una copia di quelle di App2DoReader (`alifresca.py`, `tools/ivisto_viewer.html`), che genera il PDF IVISTO: un ufficio nuovo va aggiunto in entrambi i progetti.
 
 ---
 
@@ -168,11 +187,11 @@ Il documento è un singolo `<div class="card">` con 4 sezioni interne più foote
     <div class="result-desc">{code.desc}</div>
   </div>
 
-  <!-- 3 stat boxes affiancate -->
-  <div class="stat-grid">
-    {ivSb("Data uscita effettiva",    ivistoFmtDate(exitDate))}
+  <!-- 3 stat boxes: 2+1 a schermo, su una riga in stampa (stat-grid-3) -->
+  <div class="stat-grid stat-grid-3">
+    {ivSb(transit ? "Data uscita certificata" : "Data uscita effettiva", ivistoFmtDate(exitDate))}
     {ivSb("Uscita conclusa in data", ivistoFmtDate(prepDate))}
-    {ivSb("Movimento in transito",   transit ? "Sì" : "No")}
+    {ivSb("Movimento in transito",   inTransito)}
   </div>
 </div>
 ```
@@ -190,7 +209,7 @@ Il documento è un singolo `<div class="card">` con 4 sezioni interne più foote
       <div class="stat-value mono">
         <a class="mrn-link" href="https://www.adm.gov.it/..." target="_blank"
            onclick="ivistoOpenMrn('{mrn}')">
-          {mrn} ↗
+          {mrn}<span class="screen-only"> ↗</span>
         </a>
       </div>
     </div>
@@ -198,23 +217,28 @@ Il documento è un singolo `<div class="card">` con 4 sezioni interne più foote
     <!-- Ufficio esportazione (metà larghezza) -->
     {officeBox("Ufficio doganale di esportazione", exportRef)}
 
-    <!-- Ufficio uscita effettiva (metà larghezza) -->
-    {officeBox("Ufficio doganale di uscita effettiva", exitRef)}
+    <!-- Ufficio di uscita (metà larghezza) -->
+    {officeBox(transit ? "Ufficio di uscita (partenza del transito)" : "Ufficio doganale di uscita effettiva", exitRef)}
 
-    <!-- Ufficio destinazione (solo se transito, full-width) -->
-    {destRef ? officeBox("Ufficio doganale di destinazione (transito)", destRef, true) : ""}
+    <!-- Ufficio destinazione (solo se presente, full-width) -->
+    {destRef ? officeBox("Ufficio doganale di destinazione del transito", destRef, true) : ""}
   </div>
+  {notaTransito}  <!-- solo se transit = 1 -->
 </div>
 ```
+
+**Nota transito** (`<p class="note-text">`, solo con `transit = 1`): l'ufficio di uscita è l'ufficio di partenza del transito (art. 329, par. 5-6, Reg. (UE) 2015/2447); la merce lascia il territorio doganale dell'Unione con la conclusione del transito all'ufficio di destinazione; la data di uscita certificata corrisponde al vincolo al transito esterno T1 o, per gli altri transiti, all'appuramento del transito (art. 333, par. 2, lett. b-c).
 
 **`officeBox` genera:**
 ```html
 <div class="stat-box [full]">
-  <div class="stat-label">{label}</div>
+  <div class="stat-label">{label}<span class="print-only"> — {office.code}</span></div>  <!-- codice nell'etichetta solo in stampa -->
   <div class="stat-value">{office.name} [<span class="tag-unknown">non in rubrica</span>]</div>
-  <div class="stat-sub">{office.code}</div>  <!-- solo se code non vuoto -->
+  <div class="stat-sub">{office.code}</div>  <!-- solo a schermo, solo per uffici in rubrica -->
 </div>
 ```
+
+Per gli uffici fuori rubrica il codice è già nel nome, quindi non compare né nell'etichetta né nel `stat-sub`.
 
 ### 5.4 Sezione 3 — Documenti di supporto (condizionale)
 
@@ -225,7 +249,7 @@ Presente solo se `suppDocs.length > 0`.
   <div class="doc-section-title">Documenti di supporto ({N})</div>
   <!-- Un blocco per ogni documento -->
   <div class="stat-grid" style="margin-bottom:8px">
-    {ivSb("Tipo documento", sd.type)}
+    {ivSb("Tipo documento", DOC_TIPI[sd.type] ? sd.type + " — " + DOC_TIPI[sd.type] : sd.type)}
     {ivSb("Riferimento",    sd.ref, false, true)}  <!-- mono=true -->
   </div>
   ...
@@ -466,7 +490,26 @@ Tutti con `!important`.
 #ivisto-panel .note-text     { font-size: 9px; color: #888; }
 ```
 
-### 10.7 Data di stampa
+### 10.7 Impaginazione allineata al PDF IVISTO di App2DoReader
+
+La stampa riproduce il PDF generato da `alifresca._generate_ivisto_pdf`:
+
+```css
+@page { size: A4 portrait; margin: 8mm 10mm; }
+#ivisto-panel, #ivisto-panel .card { font-family: Helvetica, Arial, var(--sans); }  /* mono solo per MRN e riferimenti */
+#ivisto-panel .card-head { background: #f3f3f3; border: 1px solid #ccc; font-size: 13px; font-weight: 600; text-transform: none; }
+#ivisto-panel .card-head .badge { background: #fff; border: 1px solid currentColor; }  /* colore scuro per esito */
+#ivisto-panel .card-head .dot { display: none; }
+#ivisto-panel .stat-grid-3 { grid-template-columns: 1fr 1fr 1fr; }   /* esito su una riga */
+#ivisto-panel .stat-value { font-weight: 600; }
+#ivisto-panel .stat-sub, #ivisto-panel .screen-only { display: none !important; }
+#ivisto-panel .print-only { display: inline; }   /* codice ufficio nell'etichetta */
+#ivisto-panel .mrn-link { text-decoration: none; }
+```
+
+Spigoli vivi (`border-radius: 0`) per stat-box, result-block e badge, nota in testo giustificato.
+
+### 10.8 Data di stampa
 
 Il campo `#printDate` è `display:none` a schermo e viene reso visibile solo in stampa.  
 Il testo viene impostato da:
@@ -552,16 +595,22 @@ oppure
     <code>A2</code>
     <exitDate>2025-04-14</exitDate>
   </ExitControlResult>
-  <MRN>25IT273100AB123456</MRN>
-  <transit>0</transit>
-  <referenceNumber>IT273100</referenceNumber>
-  <referenceNumber>IT273102</referenceNumber>
-  <SupportingDocument>
-    <type>N380</type>
-    <referenceNumber>FAT/2025/0042</referenceNumber>
-  </SupportingDocument>
+  <ExportOperation>
+    <MRN>25IT273100AB123456</MRN>
+    <transit>0</transit>
+  </ExportOperation>
+  <CustomsOfficeOfExport><referenceNumber>IT273100</referenceNumber></CustomsOfficeOfExport>
+  <CustomsOfficeOfExitActual><referenceNumber>IT273102</referenceNumber></CustomsOfficeOfExitActual>
+  <GoodsShipment>
+    <SupportingDocument>
+      <type>N380</type>
+      <referenceNumber>FAT/2025/0042</referenceNumber>
+    </SupportingDocument>
+  </GoodsShipment>
 </CC599C>
 ```
+
+Gli uffici vanno dentro il loro elemento (`CustomsOfficeOfExport`, `CustomsOfficeOfExitActual` o `CustomsOfficeOfExit`, `CustomsOfficeOfDestination`): un `referenceNumber` fuori da questi elementi non viene letto come ufficio.
 
 ---
 
@@ -573,10 +622,10 @@ oppure
 
 3. **I colori del result block** hanno una variante dark (semitrasparente) e una variante print (piena, alta leggibilità). Qualsiasi ricostruzione deve mantenere entrambe.
 
-4. **I codici ufficio** hanno una rubrica hardcoded con ~150 voci (vedi `OFFICES` in `main.py:3196`). Voci non trovate mostrano il badge `non in rubrica`.
+4. **I codici ufficio** hanno una rubrica hardcoded con 189 voci (vedi `OFFICES` in `main.py`), copia di quella di App2DoReader. Voci non trovate mostrano il badge `non in rubrica`.
 
 5. **La sezione documenti di supporto** (§5.4) è condizionale: appare solo se il campo `SupportingDocument` è presente nell'XML.
 
-6. **La sezione destinazione transito** (§5.3) è condizionale: appare solo se `CustomsOfficeOfDestination/referenceNumber` è presente nell'XML.
+6. **La sezione destinazione transito** (§5.3) è condizionale: appare solo se `CustomsOfficeOfDestination/referenceNumber` è presente nell'XML. Con `transit = 1` cambiano anche etichette (data certificata, ufficio di partenza del transito) e compare la nota normativa.
 
 7. **Il font IBM Plex** (Mono + Sans) è caricato da Google Fonts; per uso offline serve una copia locale o un font monospazio alternativo.

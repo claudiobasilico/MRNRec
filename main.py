@@ -1972,6 +1972,7 @@ HTML = r"""<!DOCTYPE html>
   #ivisto-panel .stat-value { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; word-break: break-all; }
   #ivisto-panel .stat-value.mono { font-family: var(--mono); font-size: 13px; color: var(--accent); }
   #ivisto-panel .stat-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 3px; }
+  #ivisto-panel .print-only { display: none; }
   #ivisto-panel .mrn-link { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; color: inherit; }
 
   /* TAG non in rubrica */
@@ -2011,6 +2012,7 @@ HTML = r"""<!DOCTYPE html>
     border-radius:4px; padding:1px 7px; font-size:.75rem; font-family:var(--mono); }
 
   @media print {
+    @page { size: A4 portrait; margin: 8mm 10mm; }
     body { background: #fff; color: #111; font-size: 11px; }
     .topbar, .tabs, #tab-rec, #tab-admin { display: none !important; }
     .wrap { max-width: 100%; padding: 0; margin: 0; }
@@ -2043,6 +2045,27 @@ HTML = r"""<!DOCTYPE html>
     #ivisto-panel .note-text { font-size: 9px; color: #888; }
     #ivisto-panel #printDate { display: block !important; font-size: 10px; color: #888; margin-top: 6px; font-family: monospace; }
     #ivisto-panel .toolbar, #ivisto-panel #uploadCard { display: none !important; }
+    /* Impaginazione del PDF IVISTO (App2DoReader/alifresca.py): sans, codice ufficio nell'etichetta, esito su tre colonne */
+    #ivisto-panel, #ivisto-panel .card { font-family: Helvetica, Arial, var(--sans); }
+    #ivisto-panel .card-head { font-family: Helvetica, Arial, var(--sans); font-size: 13px; font-weight: 600; color: #333; text-transform: none; letter-spacing: 0; background: #f3f3f3; border: 1px solid #ccc; padding: 10px 14px; margin: -12px -12px 10px; border-radius: 0; }
+    #ivisto-panel .card-head .badge { background: #fff; border: 1px solid currentColor; border-radius: 0; padding: 3px 12px; text-transform: none; font-family: Helvetica, Arial, var(--sans); font-size: 10px; }
+    #ivisto-panel .card-head .badge-info { color: #1a3d8f; }
+    #ivisto-panel .card-head .badge-ok { color: #1a5c3a; }
+    #ivisto-panel .card-head .badge-warn { color: #7a4d00; }
+    #ivisto-panel .card-head .badge-err { color: #8f1a1a; }
+    #ivisto-panel .card-head .badge-neutral { color: #555; }
+    #ivisto-panel .card-head .dot { display: none; }
+    #ivisto-panel .doc-section-title, #ivisto-panel .stat-label { font-family: Helvetica, Arial, var(--sans); }
+    #ivisto-panel .stat-value { font-weight: 600; word-break: normal; }
+    #ivisto-panel .stat-value.mono { font-family: var(--mono); font-weight: 400; }
+    #ivisto-panel .stat-box { border-radius: 0; }
+    #ivisto-panel .stat-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    #ivisto-panel .result-block { border-radius: 0; border-left-width: 4px; }
+    #ivisto-panel .result-code, #ivisto-panel .result-desc { font-family: Helvetica, Arial, var(--sans); }
+    #ivisto-panel .stat-sub, #ivisto-panel .screen-only { display: none !important; }
+    #ivisto-panel .print-only { display: inline; }
+    #ivisto-panel .mrn-link { text-decoration: none; }
+    #ivisto-panel .note-text { text-align: justify; }
   }
 </style>
 </head>
@@ -3192,8 +3215,204 @@ const NATIONS = {
   TR:"Turchia",US:"USA",CN:"Cina",JP:"Giappone",MA:"Marocco",EG:"Egitto",
 };
 
+// Rubrica uffici: copia di OFFICES in App2DoReader/alifresca.py (tools/ivisto_viewer.html).
 const OFFICES = {
-  IT273000:"UADM Lombardia 4 — Varese (ufficio principale)",IT273100:"UADM Lombardia 4 — Varese, sezione centrale (Via Dalmazia 56)",IT273102:"UADM Lombardia 4 — Distaccamento locale Gaggiolo (Cantello VA)",IT273104:"UADM Lombardia 4 — Sezione operativa Gaggiolo",IT273105:"UADM Lombardia 4 — Sezione operativa Luino",IT273199:"UADM Lombardia 4 — Varese, cassa centrale",IT232100:"UADM Lombardia 4 — Varese, sezione operativa (codice da verificare)",IT275000:"UADM Lombardia 5 — Como (ufficio principale)",IT275100:"UADM Lombardia 5 — Como, sezione centrale",IT275102:"UADM Lombardia 5 — Sezione operativa Lecco",IT275103:"UADM Lombardia 5 — Sezione operativa Montano Lucino",IT275104:"UADM Lombardia 5 — Sezione operativa Oria Valsolda",IT275105:"UADM Lombardia 5 — Sezione operativa Ponte Chiasso",IT275199:"UADM Lombardia 5 — Como, cassa centrale",IT277000:"UADM Lombardia 1 — Milano 1 (ufficio principale)",IT277100:"UADM Lombardia 1 — Milano 1, sezione centrale",IT277199:"UADM Lombardia 1 — Milano 1, cassa centrale",IT278000:"UADM Lombardia 2 — Milano 2 (ufficio principale)",IT278100:"UADM Lombardia 2 — Milano 2, sezione centrale",IT278199:"UADM Lombardia 2 — Milano 2, cassa centrale",IT279000:"UADM Lombardia 3 — Malpensa (ufficio principale)",IT279100:"UADM Lombardia 3 — Malpensa, sezione aeroportuale",IT279199:"UADM Lombardia 3 — Malpensa, cassa centrale",IT371000:"UADM Lombardia 6 — Milano 3 (ufficio principale)",IT371100:"UADM Lombardia 6 — Milano 3, sezione centrale",IT371199:"UADM Lombardia 6 — Milano 3, cassa centrale",IT271000:"UADM Lombardia — Pavia",IT272000:"UADM Lombardia — Tirano",IT274000:"UADM Lombardia — Brescia",IT274100:"UADM Lombardia — Brescia, sezione centrale",IT274101:"UADM Lombardia — Sezione operativa Cremona",IT276000:"UADM Lombardia — Bergamo",IT276100:"UADM Lombardia — Bergamo, sezione centrale",IT079000:"UADM — Mantova",IT079100:"UADM — Mantova, sezione centrale",IT223000:"UADM Emilia 1 — Bologna (sede)",IT223100:"UADM Emilia 1 Bologna — area centrale",IT223101:"UADM Emilia 1 Bologna — Aeroporto G. Marconi",IT223102:"UADM Emilia 1 Bologna — Interporto",IT223103:"UADM Emilia 1 Bologna — area territoriale Ferrara",IT029000:"UADM Emilia 2 — Piacenza (sede)",IT029100:"UADM Emilia 2 Piacenza — area centrale",IT028000:"UADM Emilia 3 — Parma (sede)",IT028100:"UADM Emilia 3 Parma — area centrale",IT028101:"UADM Emilia 3 Parma — Aeroporto G. Verdi",IT224000:"UADM Emilia 4 — Modena (sede)",IT224100:"UADM Emilia 4 Modena — area centrale",IT224101:"UADM Emilia 4 Modena — area territoriale Reggio Emilia",IT221000:"UADM Romagna 1 — Ravenna (sede)",IT221100:"UADM Romagna 1 Ravenna — area centrale",IT225000:"UADM Romagna 2 — Rimini (sede)",IT225100:"UADM Romagna 2 Rimini — area centrale",IT225101:"UADM Romagna 2 Rimini — area territoriale Forli-Cesena",IT222000:"Bologna — cod. precedente (-> IT223000 dal 04/2025)",IT025000:"Modena — cod. precedente (-> IT224000 dal 04/2025)",IT026000:"Rimini — cod. precedente (-> IT225000 dal 04/2025)",IT022999:"Reggio Emilia — cod. precedente (-> IT224101 dal 04/2025)",IT024000:"Forli-Cesena — cod. precedente (-> IT225101 dal 04/2025)",IT027000:"Ferrara — cod. precedente (-> IT223103 dal 04/2025)",IT118000:"Aosta",IT116000:"Biella",IT311000:"Cuneo",IT312000:"Novara",IT313000:"Alessandria",IT314000:"Torino",IT117000:"Vercelli",IT119000:"Verbano-Cusio-Ossola",IT261000:"Genova 1",IT262000:"Genova 2",IT263000:"Rivalta Scrivia — Retroporto Genova",IT067000:"Imperia",IT068000:"La Spezia",IT066000:"Savona",IT034000:"Bolzano",IT035000:"Trento",IT134000:"Treviso",IT135000:"Vicenza",IT136000:"Verona",IT137000:"Venezia",IT138000:"Padova",IT126000:"Pordenone",IT127000:"Gorizia",IT128000:"Udine",IT129000:"Trieste",IT321000:"Fernetti — Retroporto Trieste",IT051999:"Arezzo",IT057000:"Firenze",IT055000:"Livorno",IT054000:"Pisa",IT056000:"Prato e Pistoia",IT107000:"Perugia",IT108000:"Terni",IT305000:"Ancona",IT308000:"Civitanova Marche",IT301000:"Civitavecchia",IT302000:"Frosinone",IT105999:"Gaeta",IT309000:"L'Aquila",IT303000:"Campobasso",IT304000:"Pescara",IT306000:"Roma 1",IT307000:"Roma 2",IT088000:"Caserta",IT089000:"Benevento",IT281000:"Napoli 1",IT282000:"Napoli 2",IT084000:"Salerno",IT019000:"Potenza",IT014000:"Foggia",IT015000:"Brindisi",IT016000:"Lecce",IT017000:"Taranto",IT018000:"Bari",IT085000:"Catanzaro",IT086000:"Gioia Tauro",IT087000:"Reggio Calabria",IT291000:"Catania",IT292000:"Palermo",IT096000:"Porto Empedocle",IT097000:"Trapani",IT098000:"Messina",IT099000:"Siracusa",IT043000:"Sassari",IT044000:"Cagliari",IT922103:"ADM — Ufficio AEO e semplificazioni",IT922104:"ADM — Ufficio Tariffa e Dazi",IT922105:"ADM — Ufficio Tributi Doganali",IT922106:"ADM — Ufficio Regimi e Traffici di Confine",CH001731:"Zoll Nord — Pratteln / Basel (CH)",CH001801:"Zoll Nord — Basel/Weil Rhein-Autobahn (CH)",CH001841:"Zoll Nord — Basel/St. Louis Autobahn (CH)",CH003110:"Basel/Mulhouse Airport (CH/FR)",CH004031:"Dogana Ticino — Chiasso Strada (CH)",CH004041:"Dogana Ticino — Chiasso Brogeda (CH)",CH004061:"Dogana Ticino — Stabio/Gaggiolo (CH)",CH004071:"Dogana Ticino — Ponte Tresa (CH)",CH004081:"Dogana Ticino — Zenna/Luino (CH)",CH006031:"Dogana Est — St. Margrethen (CH)",CH007011:"Dogana Est — Buchs SG (CH)",NL000396:"Amsterdam Airport Schiphol (NL)",NL000399:"Rotterdam — Maasvlakte (NL)",NL003000:"Rotterdam — Botlek (NL)",DE004700:"Hamburg Airport (DE)",DE006200:"Frankfurt Airport (DE)",DE008000:"Muenchen Airport (DE)",FR001300:"Paris CDG Airport (FR)",FR002100:"Marseille Port (FR)",BE000100:"Bruxelles Nationaal Airport (BE)",BE000200:"Antwerpen Port (BE)",ES000100:"Barcelona Port (ES)",ES001300:"Madrid Barajas Airport (ES)",GB000060:"Heathrow Airport (GB)",GB003110:"Dover Port (GB)",PL000100:"Warszawa Okecie Airport (PL)",AT000100:"Wien Flughafen (AT)",SE000100:"Stockholm Arlanda (SE)",DK000200:"Copenhagen Airport (DK)",FI000100:"Helsinki-Vantaa Airport (FI)",
+  IT273000:"UADM Lombardia 4 — Varese (ufficio principale)",
+  IT273100:"UADM Lombardia 4 — Varese, sezione centrale (Via Dalmazia 56)",
+  IT273102:"UADM Lombardia 4 — Distaccamento locale Gaggiolo (Cantello VA)",
+  IT273104:"UADM Lombardia 4 — Sezione operativa Gaggiolo",
+  IT273105:"UADM Lombardia 4 — Sezione operativa Luino",
+  IT273199:"UADM Lombardia 4 — Varese, cassa centrale",
+  IT232100:"UADM Lombardia 4 — Varese, sezione operativa",
+  IT275000:"UADM Lombardia 5 — Como (ufficio principale)",
+  IT275100:"UADM Lombardia 5 — Como, sezione centrale",
+  IT275102:"UADM Lombardia 5 — Sezione operativa Lecco",
+  IT275103:"UADM Lombardia 5 — Sezione operativa Montano Lucino",
+  IT275104:"UADM Lombardia 5 — Sezione operativa Oria Valsolda",
+  IT275105:"UADM Lombardia 5 — Sezione operativa Ponte Chiasso",
+  IT275199:"UADM Lombardia 5 — Como, cassa centrale",
+  IT277000:"UADM Lombardia 1 — Milano 1 (ufficio principale)",
+  IT277100:"UADM Lombardia 1 — Milano 1, sezione centrale",
+  IT277199:"UADM Lombardia 1 — Milano 1, cassa centrale",
+  IT278000:"UADM Lombardia 2 — Milano 2 (ufficio principale)",
+  IT278100:"UADM Lombardia 2 — Milano 2, sezione centrale",
+  IT278199:"UADM Lombardia 2 — Milano 2, cassa centrale",
+  IT279000:"UADM Lombardia 3 — Malpensa (ufficio principale)",
+  IT279100:"UADM Lombardia 3 — Malpensa, sezione aeroportuale",
+  IT279199:"UADM Lombardia 3 — Malpensa, cassa centrale",
+  IT371000:"UADM Lombardia 6 — Milano 3 (ufficio principale)",
+  IT371100:"UADM Lombardia 6 — Milano 3, sezione centrale",
+  IT371199:"UADM Lombardia 6 — Milano 3, cassa centrale",
+  IT271000:"UADM Lombardia — Pavia",
+  IT272000:"UADM Lombardia — Tirano",
+  IT274000:"UADM Lombardia — Brescia",
+  IT274100:"UADM Lombardia — Brescia, sezione centrale",
+  IT274101:"UADM Lombardia — Sezione operativa Cremona",
+  IT276000:"UADM Lombardia — Bergamo",
+  IT276100:"UADM Lombardia — Bergamo, sezione centrale",
+  IT079000:"UADM — Mantova",
+  IT079100:"UADM — Mantova, sezione centrale",
+  IT223000:"UADM Emilia 1 — Bologna (sede)",
+  IT223100:"UADM Emilia 1 Bologna — area centrale",
+  IT223101:"UADM Emilia 1 Bologna — Aeroporto G. Marconi",
+  IT223102:"UADM Emilia 1 Bologna — Interporto",
+  IT223103:"UADM Emilia 1 Bologna — area territoriale Ferrara",
+  IT029000:"UADM Emilia 2 — Piacenza (sede)",
+  IT029100:"UADM Emilia 2 Piacenza — area centrale",
+  IT028000:"UADM Emilia 3 — Parma (sede)",
+  IT028100:"UADM Emilia 3 Parma — area centrale",
+  IT028101:"UADM Emilia 3 Parma — Aeroporto G. Verdi",
+  IT224000:"UADM Emilia 4 — Modena (sede)",
+  IT224100:"UADM Emilia 4 Modena — area centrale",
+  IT224101:"UADM Emilia 4 Modena — area territoriale Reggio Emilia",
+  IT221000:"UADM Romagna 1 — Ravenna (sede)",
+  IT221100:"UADM Romagna 1 Ravenna — area centrale",
+  IT225000:"UADM Romagna 2 — Rimini (sede)",
+  IT225100:"UADM Romagna 2 Rimini — area centrale",
+  IT225101:"UADM Romagna 2 Rimini — area territoriale Forli-Cesena",
+  IT222000:"Bologna — cod. precedente (-> IT223000 dal 04/2025)",
+  IT025000:"Modena — cod. precedente (-> IT224000 dal 04/2025)",
+  IT026000:"Rimini — cod. precedente (-> IT225000 dal 04/2025)",
+  IT022999:"Reggio Emilia — cod. precedente (-> IT224101 dal 04/2025)",
+  IT024000:"Forli-Cesena — cod. precedente (-> IT225101 dal 04/2025)",
+  IT027000:"Ferrara — cod. precedente (-> IT223103 dal 04/2025)",
+  IT118000:"Aosta",
+  IT116000:"Biella",
+  IT311000:"Cuneo",
+  IT312000:"Novara",
+  IT313000:"Alessandria",
+  IT314000:"Torino",
+  IT117000:"Vercelli",
+  IT119000:"Verbano-Cusio-Ossola",
+  IT261000:"Genova 1",
+  IT262000:"Genova 2",
+  IT263000:"Rivalta Scrivia — Retroporto Genova",
+  IT067000:"Imperia",
+  IT068000:"La Spezia",
+  IT066000:"Savona",
+  IT034000:"Bolzano",
+  IT035000:"Trento",
+  IT134000:"Treviso",
+  IT135000:"Vicenza",
+  IT136000:"Verona",
+  IT137000:"Venezia",
+  IT138000:"Padova",
+  IT126000:"Pordenone",
+  IT127000:"Gorizia",
+  IT128000:"Udine",
+  IT129000:"Trieste",
+  IT321000:"Fernetti — Retroporto Trieste",
+  IT051999:"Arezzo",
+  IT057000:"Firenze",
+  IT055000:"Livorno",
+  IT054000:"Pisa",
+  IT056000:"Prato e Pistoia",
+  IT107000:"Perugia",
+  IT108000:"Terni",
+  IT305000:"Ancona",
+  IT308000:"Civitanova Marche",
+  IT301000:"Civitavecchia",
+  IT302000:"Frosinone",
+  IT105999:"Gaeta",
+  IT309000:"L'Aquila",
+  IT303000:"Campobasso",
+  IT304000:"Pescara",
+  IT306000:"Roma 1",
+  IT307000:"Roma 2",
+  IT088000:"Caserta",
+  IT089000:"Benevento",
+  IT281000:"Napoli 1",
+  IT282000:"Napoli 2",
+  IT084000:"Salerno",
+  IT019000:"Potenza",
+  IT014000:"Foggia",
+  IT015000:"Brindisi",
+  IT016000:"Lecce",
+  IT017000:"Taranto",
+  IT018000:"Bari",
+  IT085000:"Catanzaro",
+  IT086000:"Gioia Tauro",
+  IT087000:"Reggio Calabria",
+  IT291000:"Catania",
+  IT292000:"Palermo",
+  IT096000:"Porto Empedocle",
+  IT097000:"Trapani",
+  IT098000:"Messina",
+  IT099000:"Siracusa",
+  IT043000:"Sassari",
+  IT044000:"Cagliari",
+  IT922103:"ADM — Ufficio AEO e semplificazioni",
+  IT922104:"ADM — Ufficio Tariffa e Dazi",
+  IT922105:"ADM — Ufficio Tributi Doganali",
+  IT922106:"ADM — Ufficio Regimi e Traffici di Confine",
+  CH001731:"Zoll Nord — Pratteln / Basel (CH)",
+  CH001801:"Zoll Nord — Basel/Weil Rhein-Autobahn (CH)",
+  CH001841:"Zoll Nord — Basel/St. Louis Autobahn (CH)",
+  CH003110:"Basel/Mulhouse Airport (CH/FR)",
+  CH004031:"Dogana Ticino — Chiasso Strada (CH)",
+  CH004041:"Dogana Ticino — Chiasso Brogeda (CH)",
+  CH004061:"Dogana Ticino — Stabio/Gaggiolo (CH)",
+  CH004071:"Dogana Ticino — Ponte Tresa (CH)",
+  CH004081:"Dogana Ticino — Zenna/Luino (CH)",
+  CH006031:"Dogana Est — St. Margrethen (CH)",
+  CH007011:"Dogana Est — Buchs SG (CH)",
+  NL000396:"Amsterdam Airport Schiphol (NL)",
+  NL000399:"Rotterdam — Maasvlakte (NL)",
+  NL003000:"Rotterdam — Botlek (NL)",
+  DE004700:"Hamburg Airport (DE)",
+  DE006200:"Frankfurt Airport (DE)",
+  DE008000:"Muenchen Airport (DE)",
+  FR001300:"Paris CDG Airport (FR)",
+  FR002100:"Marseille Port (FR)",
+  BE000100:"Bruxelles Nationaal Airport (BE)",
+  BE000200:"Antwerpen Port (BE)",
+  ES000100:"Barcelona Port (ES)",
+  ES001300:"Madrid Barajas Airport (ES)",
+  GB000060:"Heathrow Airport (GB)",
+  GB003110:"Dover Port (GB)",
+  PL000100:"Warszawa Okecie Airport (PL)",
+  AT000100:"Wien Flughafen (AT)",
+  SE000100:"Stockholm Arlanda (SE)",
+  DK000200:"Copenhagen Airport (DK)",
+  FI000100:"Helsinki-Vantaa Airport (FI)",
+  IT055100:"UADM Toscana 2 — Livorno, sezione",
+  IT118100:"UADM Valle d'Aosta — sezione",
+  IT118101:"UADM Valle d'Aosta — Distaccamento locale Traforo Gran S. Bernardo",
+  IT119100:"UADM Piemonte 5 — Domodossola, sezione",
+  IT134100:"UADM Veneto 4 — Treviso, sezione",
+  IT136100:"UADM Veneto 2 — Verona, sezione",
+  IT138100:"UADM Veneto 5 — Padova, sezione",
+  IT211101:"Genova — Distaccamento locale Porto Genova Passo Nuovo",
+  IT211102:"Genova — Distaccamento locale Porto Genova Pra'",
+  IT272100:"UADM Lombardia 9 — Tirano, sezione",
+  IT272101:"UADM Lombardia 9 — Distaccamento locale Passo del Foscagno",
+  IT272103:"UADM Lombardia 9 — Distaccamento locale Villa di Chiavenna",
+  IT273101:"UADM Lombardia 4 — Distaccamento locale Busto Arsizio",
+  IT305100:"UADM Marche 1 — Ancona, sezione",
+  IT322101:"Trieste — Distaccamento locale Porto Industriale di Trieste",
+  IT371101:"UADM Lombardia 6 — Distaccamento locale Melzo",
+  IT372100:"UADM Lombardia 1 — Milano, sezione",
+  IT374101:"Brescia — Distaccamento locale Aeroporto Brescia",
+  CH001631:"Zoll Nord — Brugg (CH)",
+  CH004162:"Dogana Sud — Mendrisio (CH)",
+  CH004181:"Dogana Sud — Chiasso Strada (CH)",
+  CH005051:"Zoll West — Gamsen (CH)",
+  CH006221:"Douane Ouest — Thonex-Vallard (CH)",
+  CH006251:"Douane Ouest — Bardonnex (CH)",
+  BE343000:"Zeebrugge D (BE)",
+  FR004060:"Saint-Malo (FR)",
+  FR590002:"Dunkerque Ferry (FR)",
+  FR620001:"Calais Port Tunnel (FR)",
+  GB000245:"East Midlands Airport (GB)",
+  HR070319:"Bajakovo, valico di confine (HR)",
+  HR070327:"Tovarnik, valico di confine (HR)",
+};
+
+// Documenti di supporto con descrizione (serie N82x = transito), come DOC_TIPI in alifresca.py.
+const DOC_TIPI = {
+  N820:"Transito misto T (merci T1 e T2)",
+  N821:"Transito esterno T1",
+  N822:"Transito comunitario interno T2",
 };
 
 function getOffice(code) {
@@ -3201,7 +3420,7 @@ function getOffice(code) {
   const name = OFFICES[code];
   if (name) return { name, code, unknown:false };
   const nation = NATIONS[code.substring(0,2)];
-  return { name: nation ? "Ufficio doganale — " + nation : code, code, unknown:true };
+  return { name: nation ? "Ufficio doganale — " + nation + " (" + code + ")" : code, code, unknown:true };
 }
 
 function ivistoFmtDate(d) {
@@ -3224,9 +3443,10 @@ function ivSb(label, value, full, mono) {
 function officeBox(label, code, full) {
   const o = getOffice(code);
   const unk = o.unknown ? '<span class="tag-unknown">non in rubrica</span>' : "";
-  const sub = o.code ? '<div class="stat-sub">' + o.code + '</div>' : "";
+  // Per gli uffici fuori rubrica il codice è già nel nome.
+  const sub = o.code && !o.unknown ? '<div class="stat-sub">' + o.code + '</div>' : "";
   return '<div class="stat-box' + (full?" full":"") + '">' +
-    '<div class="stat-label">' + label + '</div>' +
+    '<div class="stat-label">' + label + (o.code && !o.unknown ? '<span class="print-only"> &mdash; ' + o.code + '</span>' : "") + '</div>' +
     '<div class="stat-value">' + o.name + unk + '</div>' +
     sub + '</div>';
 }
@@ -3245,11 +3465,17 @@ function renderDoc(xml) {
   const missing = Object.entries(req).filter(([t]) => !doc.getElementsByTagName(t).length).map(([,l]) => l);
   if (missing.length) return { error:"Il file XML caricato non e' un messaggio CC599C (IVISTO).<br>Tag obbligatori mancanti:<ul>" + missing.map(m => "<li>" + m + "</li>").join("") + "</ul>" };
 
-  const refs = [...doc.getElementsByTagName("referenceNumber")];
-  const exportRef = refs[0]?.textContent || null;
-  const exitRef = refs[1]?.textContent || null;
-  const destNode = doc.getElementsByTagName("CustomsOfficeOfDestination")[0];
-  const destRef = destNode ? destNode.getElementsByTagName("referenceNumber")[0]?.textContent : null;
+  // Uffici letti dal loro elemento, non per posizione dei referenceNumber.
+  const ufficio = (...nomi) => {
+    for (const n of nomi) {
+      const v = doc.getElementsByTagName(n)[0]?.getElementsByTagName("referenceNumber")[0]?.textContent?.trim();
+      if (v) return v;
+    }
+    return null;
+  };
+  const exportRef = ufficio("CustomsOfficeOfExport");
+  const exitRef = ufficio("CustomsOfficeOfExitActual", "CustomsOfficeOfExit");
+  const destRef = ufficio("CustomsOfficeOfDestination");
   const mrn = doc.getElementsByTagName("MRN")[0]?.textContent || null;
   const transit = doc.getElementsByTagName("transit")[0]?.textContent === "1";
   const rc = doc.getElementsByTagName("code")[0]?.textContent || null;
@@ -3260,11 +3486,18 @@ function renderDoc(xml) {
   const suppDocs = [...doc.getElementsByTagName("SupportingDocument")].map(sd => ({type:sd.getElementsByTagName("type")[0]?.textContent || "", ref:sd.getElementsByTagName("referenceNumber")[0]?.textContent || ""}));
 
   const code = EXIT_CODES[rc] || { label:"Codice "+(rc||"?"), desc:"Codice esito non riconosciuto (tabella CL393).", cls:"default", dot:"neutral", badge:"badge-neutral" };
-  const rcls = rc ? "result-"+rc.charAt(0) : "result-default";
+  const rcls = "result-" + code.cls;
+
+  // Esportazione seguita da transito: ufficio di uscita = partenza del transito
+  // (art. 329, par. 5-6, Reg. (UE) 2015/2447); data di uscita = vincolo al transito
+  // esterno o appuramento del transito (art. 333, par. 2).
+  const tipoTransito = suppDocs.map(sd => DOC_TIPI[sd.type]).find(Boolean) || null;
+  const inTransito = transit ? "Si" + (tipoTransito ? " &mdash; " + tipoTransito : "") : "No";
+  const notaTransito = transit ? '<p class="note-text" style="margin-top:10px">Esportazione seguita da transito: l\'ufficio di uscita &egrave; l\'ufficio di partenza del transito (art. 329, par. 5-6, Reg. (UE) 2015/2447); la merce lascia il territorio doganale dell\'Unione con la conclusione del transito all\'ufficio di destinazione. La data di uscita certificata corrisponde al vincolo al transito esterno T1 o, per gli altri transiti (es. T2 verso un paese di transito comune), all\'appuramento del transito (art. 333, par. 2, lett. b-c).</p>' : "";
 
   const suppHTML = suppDocs.length ? '<div class="doc-section">' +
     '<div class="doc-section-title">Documenti di supporto (' + suppDocs.length + ')</div>' +
-    suppDocs.map(sd => '<div class="stat-grid" style="margin-bottom:8px">' + ivSb("Tipo documento", sd.type) + ivSb("Riferimento", sd.ref, false, true) + '</div>').join("") + '</div>' : "";
+    suppDocs.map(sd => '<div class="stat-grid" style="margin-bottom:8px">' + ivSb("Tipo documento", DOC_TIPI[sd.type] ? sd.type + " &mdash; " + DOC_TIPI[sd.type] : sd.type) + ivSb("Riferimento", sd.ref, false, true) + '</div>').join("") + '</div>' : "";
 
   return '<div class="card">' +
     '<div class="card-head"><span>Notifica di Uscita &mdash; CC599C</span>' +
@@ -3276,20 +3509,21 @@ function renderDoc(xml) {
         '<div class="result-code">' + (rc||"—") + ' &mdash; ' + code.label + '</div>' +
         '<div class="result-desc">' + code.desc + '</div>' +
       '</div>' +
-      '<div class="stat-grid">' +
-        ivSb("Data uscita effettiva", ivistoFmtDate(exitDate)) +
+      '<div class="stat-grid stat-grid-3">' +
+        ivSb(transit ? "Data uscita certificata" : "Data uscita effettiva", ivistoFmtDate(exitDate)) +
         ivSb("Uscita conclusa in data", ivistoFmtDate(prepDate)) +
-        ivSb("Movimento in transito", transit ? "Si" : "No") +
+        ivSb("Movimento in transito", inTransito) +
       '</div>' +
     '</div>' +
     '<div class="doc-section">' +
       '<div class="doc-section-title">Dichiarazione di esportazione</div>' +
       '<div class="stat-grid">' +
-        ivSb("MRN &mdash; Movement Reference Number", mrn ? '<a class="mrn-link" href="https://www.adm.gov.it/portale/notifica-di-esportazione-del-m.r.n.-movement-reference-number-" target="_blank" rel="noopener" onclick="ivistoOpenMrn(\''+mrn+'\')" title="Apri su ADM · MRN copiato negli appunti">'+mrn+' ↗</a>' : "—", true, true) +
+        ivSb("MRN &mdash; Movement Reference Number", mrn ? '<a class="mrn-link" href="https://www.adm.gov.it/portale/notifica-di-esportazione-del-m.r.n.-movement-reference-number-" target="_blank" rel="noopener" onclick="ivistoOpenMrn(\''+mrn+'\')" title="Apri su ADM · MRN copiato negli appunti">'+mrn+'<span class="screen-only"> ↗</span></a>' : "—", true, true) +
         officeBox("Ufficio doganale di esportazione", exportRef) +
-        officeBox("Ufficio doganale di uscita effettiva", exitRef) +
-        (destRef ? officeBox("Ufficio doganale di destinazione (transito)", destRef, true) : "") +
+        officeBox(transit ? "Ufficio di uscita (partenza del transito)" : "Ufficio doganale di uscita effettiva", exitRef) +
+        (destRef ? officeBox("Ufficio doganale di destinazione del transito", destRef, true) : "") +
       '</div>' +
+      notaTransito +
     '</div>' +
     suppHTML +
     '<div class="doc-section">' +
