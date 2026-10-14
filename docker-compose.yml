@@ -1,0 +1,26 @@
+# Scheletro standard della suite (§4 delle linee guida), con una deviazione
+# dichiarata: niente .env montato. Questa app non legge variabili d'ambiente
+# applicative: l'unica configurazione sono i token di accesso, che stanno in
+# data/tokens.json e si gestiscono dalla scheda Amministrazione dell'app.
+#
+# Le variabili dello stack in Portainer restano solo APP_HOME e APP_PORT.
+#
+# Nessun "image:" sul servizio: l'immagine nasce da `build: .` sull'host e non
+# esiste su nessun registry, quindi un "Re-pull image" di Portainer fallirebbe
+# cercandola su Docker Hub.
+services:
+  app:
+    build: .
+    volumes:
+      - ${APP_HOME:-.}/data:/data
+    # Default 127.0.0.1: irraggiungibile dall'esterno finché non c'è nginx davanti.
+    # APP_BIND=0.0.0.0 espone sulla LAN, senza TLS: solo per test diretti.
+    # APP_PORT deve essere unica per app (registro: #ISTRUZIONI/PORTE-HOST.md).
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8013}:8000"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

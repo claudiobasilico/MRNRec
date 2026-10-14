@@ -1,0 +1,34 @@
+# Dati di esercizio: vivono sull'host, in ${APP_HOME}/data, mai nell'immagine
+# (tokens.json contiene i token di accesso, admin compreso).
+data/
+.env
+
+# File dei clienti lasciati nella cartella del progetto (export, registri, PDF)
+*.xls
+*.xlsx
+*.csv
+*.pdf
+
+# Ambienti virtuali e pacchetto Windows
+.venv/
+venv/
+build/
+dist/
+*.spec
+avvia.bat
+
+# Documentazione e strumenti di sviluppo
+docs/
+*.md
+tests/
+test_*.py
+
+# Git, IDE e sistema
+.git/
+.claude/
+.idea/
+.vscode/
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db

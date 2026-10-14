@@ -22,6 +22,16 @@ python main.py
 
 Apri **http://localhost:8002**
 
+### Con Docker
+
+```bash
+docker compose up --build
+```
+
+Apri **http://127.0.0.1:8013**. I dati restano nella cartella `data/` del progetto
+(nel container `DATA_DIR=/data`). Deploy su server (Portainer, nginx, migrazione dei
+dati): `docs/DEPLOY.md`.
+
 ---
 
 ## Primo avvio — Token Admin
@@ -219,6 +229,8 @@ MRNRec/
 ├── main.py                        # Tutto: server, logica, frontend HTML
 ├── requirements.txt
 ├── avvia.bat                      # Launcher Windows
+├── Dockerfile, docker-compose.yml # Container (standard della suite, porta host 8013)
+├── docs/DEPLOY.md                 # Runbook di deploy su server
 ├── README.md
 ├── ALGORITHM.md                   # Documentazione algoritmo di matching fatture/MRN
 ├── IVISTO_CC599C_RENDER_SPEC.md   # Specifiche di rendering CC599C (HTML, CSS, stampa)

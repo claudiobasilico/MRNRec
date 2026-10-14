@@ -32,8 +32,9 @@ def _base() -> Path:
     return Path(__file__).parent
 
 BASE_DIR = _base()
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+# Nel container DATA_DIR=/data (bind mount sull'host); fuori, la cartella data/ del progetto.
+DATA_DIR = Path(os.environ.get("DATA_DIR") or BASE_DIR / "data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 TOKENS_FILE  = DATA_DIR / "tokens.json"
 LOGS_FILE    = DATA_DIR / "activity_log.jsonl"
